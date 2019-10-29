@@ -3,6 +3,7 @@ package labeller
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -13,6 +14,7 @@ import (
 )
 
 var labelPrefix = "secscan"
+var timestampLayout = "2006-01-02 15:04:05 -0700 MST"
 
 type vulnerabilityCount struct {
 	Unknown           int
@@ -29,6 +31,33 @@ type vulnerabilityCount struct {
 	CriticalFixable   int
 	Defcon1           int
 	Defcon1Fixable    int
+}
+
+func (c *vulnerabilityCount) TotalFixables() int {
+	return c.UnknownFixable + c.NegligibleFixable + c.LowFixable + c.MediumFixable + c.HighFixable + c.CriticalFixable + c.Defcon1Fixable
+}
+
+func (c *vulnerabilityCount) Total() int {
+	return c.Unknown + c.Negligible + c.Low + c.Medium + c.High + c.Critical + c.Defcon1
+}
+
+func (c *vulnerabilityCount) HighestSeverity() string {
+	if c.Defcon1 > 0 {
+		return secscan.Defcon1Severity
+	} else if c.Critical > 0 {
+		return secscan.CriticalSeverity
+	} else if c.High > 0 {
+		return secscan.HighSeverity
+	} else if c.Medium > 0 {
+		return secscan.MediumSeverity
+	} else if c.Low > 0 {
+		return secscan.LowSeverity
+	} else if c.Negligible > 0 {
+		return secscan.NegligibleSeverity
+	} else if c.Unknown > 0 {
+		return secscan.UnknownSeverity
+	}
+	return ""
 }
 
 func buildImageManifestVuln(namespace, image, manifestDigest string, layer *secscan.Layer) (*secscanv1alpha1.ImageManifestVuln, error) {
@@ -107,10 +136,29 @@ func buildImageManifestVuln(namespace, image, manifestDigest string, layer *secs
 		}
 	}
 
+	imgManifestVuln, _ = addAggregatedCountToStatus(aggVulnCount, imgManifestVuln)
+	imgManifestVuln.Status.LastUpdate = time.Now().UTC().String()
 	imgManifestVuln.Spec.Features = vulnerableFeatures
 	imgManifestVuln.ObjectMeta.Labels = labels
 
 	return imgManifestVuln, nil
+}
+
+func addAggregatedCountToStatus(aggVulnCount *vulnerabilityCount, manifest *secscanv1alpha1.ImageManifestVuln) (*secscanv1alpha1.ImageManifestVuln, bool) {
+	if aggVulnCount.Total() == 0 {
+		return manifest, false
+	}
+	manifest.Status.UnknownCount = aggVulnCount.Unknown
+	manifest.Status.NegligibleCount = aggVulnCount.Negligible
+	manifest.Status.LowCount = aggVulnCount.Low
+	manifest.Status.MediumCount = aggVulnCount.Medium
+	manifest.Status.HighCount = aggVulnCount.High
+	manifest.Status.CriticalCount = aggVulnCount.Critical
+	manifest.Status.Defcon1Count = aggVulnCount.Defcon1
+	manifest.Status.FixableCount = aggVulnCount.TotalFixables()
+	manifest.Status.HighestSeverity = aggVulnCount.HighestSeverity()
+
+	return manifest, true
 }
 
 func manifestName(manifestDigest string) string {

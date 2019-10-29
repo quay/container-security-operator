@@ -3,7 +3,6 @@ package image
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"regexp"
 	"strings"
 
@@ -103,7 +102,7 @@ func (img *Image) IDString() string {
 		r = img.URL(img.Host, img.Namespace, img.Repository)
 	}
 
-	return "docker-pullable://" + strings.Join([]string{r, img.Digest}, "@")
+	return strings.Join([]string{r, img.Digest}, "@")
 }
 
 func (img *Image) String() string {
@@ -125,20 +124,19 @@ func (img *Image) String() string {
 func ParseImageID(imageID string) (*Image, error) {
 	var img, host, namespace, repository, digest string
 
-	u, err := url.Parse(imageID)
-	if err != nil {
-		return nil, err
-	}
-
+	// https://github.com/kubernetes/kubernetes/issues/46255
 	imageIDTokens := strings.SplitN(imageID, "://", 2)
-	if len(imageIDTokens) != 2 {
+	if len(imageIDTokens) > 2 {
 		return nil, fmt.Errorf("Invalid imageID format")
 	}
-	if imageIDTokens[0] != "docker-pullable" {
-		return nil, fmt.Errorf("Image not using manifest digest format")
+	if len(imageIDTokens) == 2 {
+		if imageIDTokens[0] != "docker-pullable" {
+			return nil, fmt.Errorf("Image not using manifest digest format")
+		}
+		img = imageIDTokens[1]
+	} else {
+		img = imageIDTokens[0]
 	}
-
-	img = imageIDTokens[1]
 
 	i := strings.IndexRune(img, '/')
 	if i == -1 {
@@ -161,16 +159,14 @@ func ParseImageID(imageID string) (*Image, error) {
 	} else {
 		// Full registry path
 		// Format: {host}/{namespace}/{repo}@{digest}
-		u, err = url.Parse(imageID)
-		if err != nil {
-			return nil, err
-		}
-		host = u.Host
-		imagePath := strings.TrimPrefix(u.EscapedPath(), "/")
-		namespace = strings.Split(imagePath, "/")[0]
-		manifest := strings.Split(imagePath, "/")[1]
-		repository = strings.Split(manifest, "@")[0]
-		digest = strings.Split(manifest, "@")[1]
+		host = strings.SplitN(img, "/", 2)[0]
+		imagePath := strings.SplitN(img, "/", 2)[1]
+		splitImagePath := strings.Split(imagePath, "/")
+
+		imageDigest := splitImagePath[len(splitImagePath)-1]
+		repository = strings.Split(imageDigest, "@")[0]
+		digest = strings.Split(imageDigest, "@")[1]
+		namespace = strings.Join(splitImagePath[:len(splitImagePath)-1], "/")
 	}
 
 	validHost := hostnameRegex.MatchString(host)

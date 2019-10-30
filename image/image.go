@@ -50,7 +50,7 @@ func ParsePullSecrets(secretClient corev1.SecretInterface, pullSecretRefs []v1.L
 			return nil, fmt.Errorf("Unable to get pull secret: %s", secretRef.Name)
 		}
 
-		secretData := secret.Data[".dockerconfigjson"]
+		secretData := secret.Data[strings.ReplaceAll(string(secret.Type), "kubernetes.io/", ".")]
 
 		var config *DockerConfigJson
 		if err = json.Unmarshal(secretData, &config); err != nil {

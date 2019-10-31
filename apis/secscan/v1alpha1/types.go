@@ -16,7 +16,7 @@ type Feature struct {
 
 type Vulnerability struct {
 	Name          string `json:"name,omitempty"`
-	NamespaceName string `json:"namenameName,omitempty"`
+	NamespaceName string `json:"namespaceName,omitempty"`
 	Description   string `json:"description,omitempty"`
 	Link          string `json:"link,omitempty"`
 	FixedBy       string `json:"fixedby,omitempty"`

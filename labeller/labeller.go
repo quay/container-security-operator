@@ -112,27 +112,32 @@ func New(config *Config, kubeconfig string, logger log.Logger) (*Labeller, error
 	l.namespaces = config.Namespaces[:]
 	l.queue = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "labeller")
 
-	podListWatcher := cache.NewListWatchFromClient(
+	multiNamespacePodListWatcher := NewMultiNamespaceListerWatcher(
 		kclient.CoreV1().RESTClient(),
 		"pods",
-		corev1.NamespaceAll,
+		l.namespaces,
 		fields.Everything(),
 	)
-	l.podInformer = cache.NewSharedIndexInformer(podListWatcher, &corev1.Pod{}, l.resyncPeriod, cache.Indexers{})
+	l.podInformer = cache.NewSharedIndexInformer(
+		multiNamespacePodListWatcher,
+		&corev1.Pod{},
+		l.resyncPeriod,
+		cache.Indexers{},
+	)
 	l.podInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    l.handleAddPod,
 		DeleteFunc: l.handleDeletePod,
 		UpdateFunc: l.handleUpdatePod,
 	})
 
-	imageManifestVulnListWatcher := cache.NewListWatchFromClient(
+	multiNamespaceImageManifestVulnListWatcher := NewMultiNamespaceListerWatcher(
 		l.sclient.SecscanV1alpha1().RESTClient(),
 		"imagemanifestvulns",
-		corev1.NamespaceAll,
+		l.namespaces,
 		fields.Everything(),
 	)
 	l.imageManifestVulnInformer = cache.NewSharedIndexInformer(
-		imageManifestVulnListWatcher,
+		multiNamespaceImageManifestVulnListWatcher,
 		&secscanv1alpha1.ImageManifestVuln{},
 		l.resyncPeriod,
 		cache.Indexers{},

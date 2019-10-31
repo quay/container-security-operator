@@ -126,9 +126,6 @@ func buildImageManifestVuln(namespace, image, manifestDigest string, layer *secs
 			default:
 				return nil, fmt.Errorf("Unknown severity %s: not one of %v", vulnerability.Severity, secscan.Severities)
 			}
-
-			label := labelName(labelPrefix, vulnerability.Name)
-			labels[label] = vulnerability.Severity
 		}
 
 		if vulnCount > 0 {

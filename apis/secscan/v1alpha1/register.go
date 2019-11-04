@@ -1,7 +1,7 @@
 package v1alpha1
 
 import (
-	"github.com/coreos-inc/security-labeller/apis/secscan"
+	"github.com/quay/container-security-operator/apis/secscan"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"

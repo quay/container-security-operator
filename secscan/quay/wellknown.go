@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/coreos-inc/security-labeller/secscan/rest"
+	"github.com/quay/container-security-operator/secscan/rest"
 )
 
 const (

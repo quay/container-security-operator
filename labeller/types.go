@@ -3,7 +3,7 @@ package labeller
 import (
 	"sync"
 
-	"github.com/coreos-inc/security-labeller/secscan/quay"
+	"github.com/quay/container-security-operator/secscan/quay"
 )
 
 // type PodVulnerabilityCount struct {

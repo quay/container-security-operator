@@ -8,9 +8,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 
-	secscanv1alpha1 "github.com/coreos-inc/security-labeller/apis/secscan/v1alpha1"
-	secscanv1alpha1client "github.com/coreos-inc/security-labeller/generated/versioned/typed/secscan/v1alpha1"
-	"github.com/coreos-inc/security-labeller/secscan"
+	secscanv1alpha1 "github.com/quay/container-security-operator/apis/secscan/v1alpha1"
+	secscanv1alpha1client "github.com/quay/container-security-operator/generated/versioned/typed/secscan/v1alpha1"
+	"github.com/quay/container-security-operator/secscan"
 )
 
 var labelPrefix = "secscan"

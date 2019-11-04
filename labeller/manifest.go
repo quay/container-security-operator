@@ -222,8 +222,12 @@ func removeAffectedPodFromManifests(apiclient secscanv1alpha1client.ImageManifes
 
 	for _, manifest := range manifestList.Items {
 		if updatedManifest, changed := removeAffectedPod(key, manifest); changed {
-			if _, err := apiclient.Update(updatedManifest); err != nil {
+			updatedManifest, err := apiclient.Update(updatedManifest)
+			if err != nil {
 				return fmt.Errorf("Failed to update ImageManifestVuln: %w", err)
+			}
+			if _, err := apiclient.UpdateStatus(updatedManifest); err != nil {
+				return fmt.Errorf("Failed to update ImageManifestVuln status: %w", err)
 			}
 		}
 	}
@@ -262,7 +266,7 @@ func garbageCollectManifests(podclient corev1.PodInterface, manifestclient secsc
 		}
 
 		if updated {
-			if _, err := manifestclient.Update(updatedManifest); err != nil {
+			if _, err := manifestclient.UpdateStatus(updatedManifest); err != nil {
 				return fmt.Errorf("Failed to update ImageManifestVuln: %w", err)
 			}
 		}

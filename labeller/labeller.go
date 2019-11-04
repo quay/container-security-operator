@@ -387,19 +387,30 @@ func (l *Labeller) SecurityLabelPod(key string) error {
 
 			imgManifestVuln, _ = addAffectedPod(key, img.ContainerID, imgManifestVuln)
 
-			if _, err = imageManifestVulnClient.Create(imgManifestVuln); err != nil {
-				level.Error(l.logger).Log("msg", "Error creating ImageManifestVuln", "manifestKey", manifestKey, "key", key)
+			createdVuln, err := imageManifestVulnClient.Create(imgManifestVuln)
+			if err != nil {
+				level.Error(l.logger).Log("msg", "Error creating ImageManifestVuln", "manifestKey", manifestKey, "key", key, "err", err)
 				continue
 			}
 
 			level.Info(l.logger).Log("msg", "Created ImageManifestVuln", "manifestKey", manifestKey, "key", key)
+			createdVuln.Status = imgManifestVuln.Status
+			if _, err = imageManifestVulnClient.UpdateStatus(createdVuln); err != nil {
+				level.Error(l.logger).Log("msg", "Error updating ImageManifestVuln status", "manifestKey", manifestKey, "key", key, "err", err)
+			}
 			continue
 		}
 
 		imgManifestVuln = obj.(*secscanv1alpha1.ImageManifestVuln)
 		imgManifestVuln, _ = addAffectedPod(key, img.ContainerID, imgManifestVuln)
-		if _, err := imageManifestVulnClient.Update(imgManifestVuln); err != nil {
+
+		updatedVuln, err := imageManifestVulnClient.Update(imgManifestVuln)
+		if err != nil {
 			level.Error(l.logger).Log("msg", "Error updating ImageManifestVuln", "key", manifestKey, "err", err)
+		}
+		updatedVuln.Status = imgManifestVuln.Status
+		if _, err := imageManifestVulnClient.UpdateStatus(updatedVuln); err != nil {
+			level.Error(l.logger).Log("msg", "Error updating ImageManifestVuln status", "key", manifestKey, "err", err)
 			continue
 		}
 	}

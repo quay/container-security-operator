@@ -19,7 +19,7 @@ limitations under the License.
 package scheme
 
 import (
-	secscanv1alpha1 "github.com/coreos-inc/security-labeller/apis/secscan/v1alpha1"
+	secscanv1alpha1 "github.com/quay/container-security-operator/apis/secscan/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

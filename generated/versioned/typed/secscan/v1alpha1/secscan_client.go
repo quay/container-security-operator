@@ -19,8 +19,8 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/coreos-inc/security-labeller/apis/secscan/v1alpha1"
-	"github.com/coreos-inc/security-labeller/generated/versioned/scheme"
+	v1alpha1 "github.com/quay/container-security-operator/apis/secscan/v1alpha1"
+	"github.com/quay/container-security-operator/generated/versioned/scheme"
 	rest "k8s.io/client-go/rest"
 )
 

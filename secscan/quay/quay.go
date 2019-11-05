@@ -8,8 +8,8 @@ import (
 	"path"
 	"strconv"
 
-	"github.com/coreos-inc/security-labeller/image"
-	"github.com/coreos-inc/security-labeller/secscan"
+	"github.com/quay/container-security-operator/image"
+	"github.com/quay/container-security-operator/secscan"
 )
 
 type Quay struct {

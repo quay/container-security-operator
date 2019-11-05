@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/coreos-inc/security-labeller/k8sutils"
+	"github.com/quay/container-security-operator/k8sutils"
 	"k8s.io/api/core/v1"
 )
 

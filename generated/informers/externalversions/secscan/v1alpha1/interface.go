@@ -19,17 +19,16 @@ limitations under the License.
 package v1alpha1
 
 import (
-	internalinterfaces "github.com/coreos-inc/security-labeller/generated/informers/internalversion/internalinterfaces"
-	internalversion "github.com/coreos-inc/security-labeller/generated/informers/internalversion/v1alpha1/internalversion"
+	internalinterfaces "github.com/quay/container-security-operator/generated/informers/externalversions/internalinterfaces"
 )
 
-// Interface provides access to each of this group's versions.
+// Interface provides access to all the informers in this group version.
 type Interface interface {
-	// InternalVersion provides access to shared informers for resources in InternalVersion.
-	InternalVersion() internalversion.Interface
+	// ImageManifestVulns returns a ImageManifestVulnInformer.
+	ImageManifestVulns() ImageManifestVulnInformer
 }
 
-type group struct {
+type version struct {
 	factory          internalinterfaces.SharedInformerFactory
 	namespace        string
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
@@ -37,10 +36,10 @@ type group struct {
 
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
-	return &group{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
-// InternalVersion returns a new internalversion.Interface.
-func (g *group) InternalVersion() internalversion.Interface {
-	return internalversion.New(g.factory, g.namespace, g.tweakListOptions)
+// ImageManifestVulns returns a ImageManifestVulnInformer.
+func (v *version) ImageManifestVulns() ImageManifestVulnInformer {
+	return &imageManifestVulnInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

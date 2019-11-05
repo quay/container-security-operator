@@ -5,8 +5,8 @@ package secscan
 import (
 	"encoding/json"
 
-	secscanv1alpha1 "github.com/coreos-inc/security-labeller/apis/secscan/v1alpha1"
-	"github.com/coreos-inc/security-labeller/image"
+	secscanv1alpha1 "github.com/quay/container-security-operator/apis/secscan/v1alpha1"
+	"github.com/quay/container-security-operator/image"
 )
 
 type Client interface {

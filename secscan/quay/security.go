@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/coreos-inc/security-labeller/image"
-	"github.com/coreos-inc/security-labeller/secscan"
-	"github.com/coreos-inc/security-labeller/secscan/rest"
+	"github.com/quay/container-security-operator/image"
+	"github.com/quay/container-security-operator/secscan"
+	"github.com/quay/container-security-operator/secscan/rest"
 )
 
 type SecscanClient struct {

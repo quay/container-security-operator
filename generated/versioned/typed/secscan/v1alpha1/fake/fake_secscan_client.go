@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	v1alpha1 "github.com/coreos-inc/security-labeller/generated/versioned/typed/secscan/v1alpha1"
+	v1alpha1 "github.com/quay/container-security-operator/generated/versioned/typed/secscan/v1alpha1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )

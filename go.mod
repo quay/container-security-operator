@@ -1,4 +1,4 @@
-module github.com/coreos-inc/security-labeller
+module github.com/quay/container-security-operator
 
 go 1.13
 

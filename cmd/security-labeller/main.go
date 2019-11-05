@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/coreos-inc/security-labeller/labeller"
+	"github.com/quay/container-security-operator/labeller"
 
 	log "github.com/go-kit/kit/log"
 )

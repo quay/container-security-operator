@@ -9,11 +9,12 @@ import (
 )
 
 type Config struct {
-	Namespaces      []string               `yaml:"namespaces"`
-	Interval        time.Duration          `yaml:"interval"`
-	SecurityScanner SecurityScannerOptions `yaml:"securityScanner"`
-	LabelPrefix     string                 `yaml:"labelPrefix"`
-	PrometheusAddr  string                 `yaml:"prometheusAddr"`
+	Namespaces        []string               `yaml:"namespaces"`
+	Interval          time.Duration          `yaml:"interval"`
+	SecurityScanner   SecurityScannerOptions `yaml:"securityScanner"`
+	LabelPrefix       string                 `yaml:"labelPrefix"`
+	PrometheusAddr    string                 `yaml:"prometheusAddr"`
+	WellknownEndpoint string                 `yaml:"wellknownEndpoint"`
 }
 
 type SecurityScannerOptions struct {

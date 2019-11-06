@@ -45,6 +45,7 @@ func main() {
 	scannerToken := flag.String("scannerToken", "", "Scanner bearer token.")
 	scannerVersion := flag.Int("scannerVersion", 1, "Scanner api version.")
 	scannerType := flag.String("scannerType", "quay", "Scanner type.")
+	wellknownEndpoint := flag.String("wellknownEndpoint", ".well-known/app-capabilities", "Wellknown endpoint")
 
 	flagKubeConfigPath := flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
 	flag.Parse()
@@ -62,10 +63,11 @@ func main() {
 		}
 	} else {
 		cfg = &labeller.Config{
-			Namespaces:     namespaces,
-			Interval:       interval,
-			LabelPrefix:    *labelPrefix,
-			PrometheusAddr: *promAddr,
+			Namespaces:        namespaces,
+			Interval:          interval,
+			LabelPrefix:       *labelPrefix,
+			PrometheusAddr:    *promAddr,
+			WellknownEndpoint: *wellknownEndpoint,
 			SecurityScanner: labeller.SecurityScannerOptions{
 				*scannerHost,
 				*scannerToken,

@@ -3,7 +3,6 @@ package labeller
 import (
 	"errors"
 	"fmt"
-	"net/url"
 	"strings"
 	"time"
 
@@ -13,7 +12,6 @@ import (
 	"github.com/quay/container-security-operator/k8sutils"
 	"github.com/quay/container-security-operator/prometheus"
 	"github.com/quay/container-security-operator/secscan"
-	"github.com/quay/container-security-operator/secscan/quay"
 
 	log "github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
@@ -44,11 +42,12 @@ var (
 )
 
 type Labeller struct {
-	kclient       kubernetes.Interface
-	sclient       secscanclient.Interface
-	secscanClient secscan.Client
-	logger        log.Logger
-	namespaces    []string
+	kclient           kubernetes.Interface
+	sclient           secscanclient.Interface
+	secscanClient     secscan.Interface
+	wellKnownEndpoint string
+	logger            log.Logger
+	namespaces        []string
 
 	queue                     workqueue.RateLimitingInterface
 	podInformer               cache.SharedIndexInformer
@@ -78,35 +77,23 @@ func New(config *Config, kubeconfig string, logger log.Logger) (*Labeller, error
 		return nil, err
 	}
 
-	scannerUrl, err := url.Parse(config.SecurityScanner.Host)
+	var secscanClient secscan.Interface
+	secscanClient, err = secscan.NewClient()
 	if err != nil {
 		return nil, err
-	}
-
-	var secscanClient secscan.Client
-	secscanClient, err = quay.NewQuayClient(
-		scannerUrl,
-		config.SecurityScanner.Token,
-		config.SecurityScanner.APIVersion,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	if !secscanClient.Ping() {
-		return nil, fmt.Errorf("Could not reach security scanning service: %s", scannerUrl)
 	}
 
 	l := &Labeller{
-		kclient:         kclient,
-		sclient:         sclient,
-		secscanClient:   secscanClient,
-		logger:          logger,
-		namespaces:      config.Namespaces[:],
-		labelPrefix:     config.LabelPrefix,
-		resyncPeriod:    config.Interval,
-		prometheus:      prometheus.NewServer(config.PrometheusAddr),
-		vulnerabilities: NewLockableVulnerabilites(),
+		kclient:           kclient,
+		sclient:           sclient,
+		secscanClient:     secscanClient,
+		logger:            logger,
+		namespaces:        config.Namespaces[:],
+		labelPrefix:       config.LabelPrefix,
+		resyncPeriod:      config.Interval,
+		wellKnownEndpoint: config.WellknownEndpoint,
+		prometheus:        prometheus.NewServer(config.PrometheusAddr),
+		vulnerabilities:   NewLockableVulnerabilites(),
 	}
 
 	l.namespaces = config.Namespaces[:]
@@ -362,8 +349,30 @@ func (l *Labeller) SecurityLabelPod(key string) error {
 			continue
 		}
 
+		// TODO(kleesc): Force rescan after interval
 		if !exists {
-			layerData, err := l.secscanClient.GetLayerData(img, true, true)
+			wellknownClient, err := l.secscanClient.Wellknown(img.Host, l.wellKnownEndpoint)
+			if err != nil {
+				level.Warn(l.logger).Log("msg", "Failed to query well-known endpoint",
+					"url", fmt.Sprintf("%s/%s", img.Host, l.wellKnownEndpoint),
+					"key", key,
+					"err", err,
+				)
+				continue
+			}
+
+			manifestSecurityTemplate, err := wellknownClient.ManifestSecurityTemplate()
+			if err != nil {
+				level.Warn(l.logger).Log("msg", "Failed to get manifest security template",
+					"url", fmt.Sprintf("%s/%s", img.Host, l.wellKnownEndpoint),
+					"template", manifestSecurityTemplate,
+					"key", key,
+					"err", err,
+				)
+				continue
+			}
+
+			layerData, err := l.secscanClient.GetLayerDataFromTemplate(manifestSecurityTemplate, img, true, true)
 			if err != nil {
 				level.Error(l.logger).Log("msg", "Error getting image's manifest data", "key", key, "err", err)
 				continue

@@ -45,7 +45,7 @@ type ImageManifestVulnStatus struct {
 	FixableCount    int `json:"fixableCount,omitempty"`
 
 	// Map from pod's path to container ids
-	AffectedPods map[string][]string `json:"afftectedPods,omitempty"`
+	AffectedPods map[string][]string `json:"affectedPods,omitempty"`
 }
 
 // +genclient

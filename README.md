@@ -25,15 +25,15 @@ securitylabeller:
 
 - Scan pods and store the the vulnerability information in CRs (by image manifest)
 - Metrics via [Prometheus](https://prometheus.io)
-- 
 
 ## Development Environment
+
 Running the labeller locally requires a valid kubeconfig.
 If the kubeconfig flag is omitted, an in-cluster config is assumed.
 
 Running locally (using `~/.kube/config`):
 ```
-kubectl create -f deploy/imagemanifestvuln.yaml
+kubectl create -f deploy/imagemanifestvuln.crd.yaml
 make run
 ```
 

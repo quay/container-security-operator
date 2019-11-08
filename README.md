@@ -2,25 +2,37 @@
 
 The Container Security Operator (CSO) brings Quay and Clair metadata to Kubernetes / OpenShift. Starting with vulnerability information the scope will get expanded over time. If it runs on OpenShift, the corresponding vulnerability information inside the OCP Console. The Container Security Operator enables cluster administrators to monitor known container image vulnerabilites in pods running on their Kubernetes cluster. The controller sets up a watch on pods in the specified namespace(s) and queries the container registry for vulnerability information. If the container registry supports image scanning, such as [Quay](https://github.com/quay/quay) with [Clair](https://github.com/quay/clair), then the Operator will expose any vulnerabilities found via the Kubernetes API in an `ImageManifestVuln` object.  This Operator requires no additional configuration after deployment, and will begin watching pods and populating `ImageManifestVulns` immediately once installed.
 
+## ImageManifestVuln
+The security information of scanned images are stored in `ImageManifestVulns` on an image manifest basis, and are named by the image's manifest digest.
+
+### Spec
+The spec provides information about the features and its associated vulnarabilities.
+The spec should be immutable relative to the cluster. When a new vulnerability is added to a feature, the operator will update the spec after the resync threshold.
+
+### Status
+The status provides information about the affected Pods/Containers. As pod are added or removed
+from the cluster, their references are added to the `affectedPods` field of the status block.
+The status also provide various statistics about the manifest. e.g lastUpdate, highestSeverity, ...
+
+### Label Selectors
+TODO
+
 ## Example config
-
 ```yaml
-
 securitylabeller:
-  host: # Leave empty to use in-cluster config
   prometheusAddr: "0.0.0.0:8081"
-  interval: 1m
-  workers: 1
-  labelPrefix: secscan # Security labels' "namespace"
-  namespaces: # List of namespaces to label in the cluster
+  interval: 15m
+  wellknownEndpoint: ".well-known/app-capabilities"
+  labelPrefix: secscan
+  namespaces:
     - default
-    - dev  
+    - dev
 ```
 
-## Features
-
-- Scan pods and store the the vulnerability information in CRs (by image manifest)
-- Metrics via [Prometheus](https://prometheus.io)
+The same options can be configured from the command line:
+```
+./container-security-operator -promAddr ":8081" -resyncInterval "15m" -wellknownEndpoint ".well-known/app-capabilities" -labelPrefix "secscan" -namespace default -namespace test
+```
 
 ## Deployment
 
@@ -39,15 +51,32 @@ This Operator will be available via **OperatorHub**.
 Running the labeller locally requires a valid kubeconfig.
 If the kubeconfig flag is omitted, an in-cluster config is assumed.
 
-Running locally (using `~/.kube/config`):
+Install the ImageManifestVuln CRD
 ```
-kubectl create -f deploy/imagemanifestvuln.crd.yaml
+make installcrds
+```
+
+Running locally (using `~/.kube/config` and `example-config.yaml`):
+```
 make run
 ```
 
-Regenerating clientsets, listers, and informers:
+To regenerate the CRD code:
 ```
-TODO
+# deepcopy
+make deepcopy
+# openapi
+make openapi
+# clientset
+make clientset
+# listers
+make listers
+# informers
+make informers
+# generate all
+codegen
+# generate all in a container
+codegen-container
 ```
 
 ### Deploying using OLM
@@ -84,32 +113,8 @@ $ kubectl get packagemanifest container-security-operator
 
 ### Using kubectl
 
-List the name of the pods with a specific vulnerability:
+Check if a pod has any vulnerability, and list the CVEs, if any:
 
 ```sh
-$ kubectl get imagemanifestvuln --selector=secscan/CVE-2013-6450 -o jsonpath='{.items[*].metadata.name}'
-```
-
-List the name of the pods that has a vulnerability with severity P0:
-
-```sh
-$ kubectl get pods --selector=secscan/P0 -o jsonpath='{.items[*].metadata.name}'
-```
-
-List the name of the pods whose highest vulnerability is P1:
-
-```sh
-$ kubectl get pods --selector=secscan/highest=P1 -o jsonpath='{.items[*].metadata.name}'
-```
-
-List the name of the pods whose highest vulnerability is P1 and have P1 vulnerabilities that can be fixed:
-
-```sh
-$ kubectl get pods --selector=secscan/highest=P1,fixableP1 -o jsonpath='{.items[*].metadata.name}'
-```
-
-List all the pods that have fixable vulnerabilities
-
-```sh
-$ kubectl get pods --selector=secscan/fixables -o jsonpath='{.items[*].metadata.name}'
+$ kubectl get imagemanifestvulns.secscan.quay.redhat.com --selector=test/redis-567899f7cc-tdl2g -o jsonpath='{.items[*].spec.features[*].vulnerabilities[*].name}'
 ```

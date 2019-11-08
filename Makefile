@@ -13,7 +13,7 @@ run: build
 
 .PHONY: installcrds
 installcrds:
-	kubectl create -f deploy/imagemanifestvuln.yaml
+	kubectl create -f deploy/imagemanifestvuln.crd.yaml
 
 .PHONY: devenv
 devenv: installcrds

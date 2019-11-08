@@ -18,7 +18,7 @@ const (
 	dockerhubNamespace = "library"
 
 	validHostnameRegex   = `^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]*[A-Za-z0-9])$`
-	validNamespaceRegex  = `^([[:alnum:]]{2,255})$`
+	validNamespaceRegex  = `([a-z0-9_-]{2,255})$`
 	validRepositoryRegex = `^([a-z0-9_-])+`
 	validDigestRegex     = `^[A-Za-z][A-Za-z0-9]*(?:[-_+.][A-Za-z][A-Za-z0-9]*)*[:][[:xdigit:]]{32,}$`
 )

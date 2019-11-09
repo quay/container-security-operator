@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: high
+  labels:
+    cso-example: 'true'
+spec:
+  containers:
+    - name: httpd
+      image: quay.io/operator-framework/httpd

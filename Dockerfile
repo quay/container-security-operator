@@ -19,5 +19,6 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build
 
 FROM alpine:3.10
 WORKDIR /
+RUN apk add --no-cache ca-certificates
 COPY --from=builder /workspace/bin/security-labeller /bin/security-labeller
 ENTRYPOINT ["/bin/security-labeller"]

@@ -1,11 +1,7 @@
 securitylabeller:
+  wellknownEndpoint: ".well-known/app-capabilities"
   prometheusAddr: ":8081"
   interval: 15s
   labelPrefix: secscan
   namespaces:
     - test
-  securityScanner:
-    host: "https://quay.io"
-    token: ""
-    apiVersion: 1
-    type: Quay

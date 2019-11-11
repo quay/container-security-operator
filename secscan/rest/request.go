@@ -17,9 +17,6 @@ type Request struct {
 	subpath    string
 	params     url.Values
 	headers    http.Header
-
-	// Quay specific resources
-	// ...
 }
 
 func NewRequest(client HTTPClient, verb string, baseURL *url.URL, versionedAPIPath string) *Request {

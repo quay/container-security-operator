@@ -9,9 +9,15 @@ import (
 	"github.com/quay/container-security-operator/image"
 )
 
-type Client interface {
-	Ping() bool
-	GetLayerData(image *image.Image, features, vulnerabilities bool) (*Layer, error)
+type Interface interface {
+	Wellknown(host, endpoint string) (WellknownInterface, error)
+	GetLayerDataFromTemplate(manifestTemplate string, image *image.Image, features, vulnerabilities bool) (*Layer, error)
+}
+
+type WellknownInterface interface {
+	ViewImageTemplate() (string, error)
+	ManifestSecurityTemplate() (string, error)
+	ImageSecurityTemplate() (string, error)
 }
 
 type Response struct {

@@ -15,10 +15,9 @@ COPY prometheus/ prometheus/
 COPY secscan/ secscan/
 COPY Makefile Makefile
 
-RUN make build
-
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build
 
 FROM alpine:3.10
 WORKDIR /
-COPY --from=builder /workspace/bin/security-labeller .
-ENTRYPOINT ["/security-labeller"]
+COPY --from=builder /workspace/bin/security-labeller /bin/security-labeller
+ENTRYPOINT ["/bin/security-labeller"]

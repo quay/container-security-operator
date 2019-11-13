@@ -2,6 +2,7 @@ securitylabeller:
   wellknownEndpoint: ".well-known/app-capabilities"
   prometheusAddr: ":8081"
   interval: 15s
+  resyncThreshold: 1h
   labelPrefix: secscan
   namespaces:
     - test

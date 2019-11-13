@@ -53,8 +53,9 @@ type Labeller struct {
 	podInformer               cache.SharedIndexInformer
 	imageManifestVulnInformer cache.SharedIndexInformer
 
-	labelPrefix  string
-	resyncPeriod time.Duration
+	labelPrefix     string
+	resyncPeriod    time.Duration
+	resyncThreshold time.Duration
 
 	prometheus *prometheus.Server
 
@@ -91,6 +92,7 @@ func New(config *Config, kubeconfig string, logger log.Logger) (*Labeller, error
 		namespaces:        config.Namespaces[:],
 		labelPrefix:       config.LabelPrefix,
 		resyncPeriod:      config.Interval,
+		resyncThreshold:   config.ResyncThreshold,
 		wellKnownEndpoint: config.WellknownEndpoint,
 		prometheus:        prometheus.NewServer(config.PrometheusAddr),
 		vulnerabilities:   NewLockableVulnerabilites(),

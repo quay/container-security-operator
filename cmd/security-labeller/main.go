@@ -40,6 +40,7 @@ func main() {
 	flagConfigPath := flag.String("config", "", "Load configuration from file.")
 	promAddr := flag.String("promAddr", ":8081", "Prometheus metrics endpoint.")
 	resyncInterval := flag.String("resyncInterval", "30m", "Controller resync interval.")
+	resyncThreshold := flag.String("resyncThreshold", "1h", "Minimum threshold to resync ImageManifestVulns.")
 	labelPrefix := flag.String("labelPrefix", "secscan", "CR label prefix.")
 	scannerHost := flag.String("scannerHost", "https://quay.io", "Scanner endpoint.")
 	scannerToken := flag.String("scannerToken", "", "Scanner bearer token.")
@@ -55,7 +56,17 @@ func main() {
 		cfg *labeller.Config
 		err error
 	)
-	interval, err := time.ParseDuration(*resyncInterval)
+
+	intervalDuration, err := time.ParseDuration(*resyncInterval)
+	if err != nil {
+		panic(err)
+	}
+
+	thresholdDuration, err := time.ParseDuration(*resyncThreshold)
+	if err != nil {
+		panic(err)
+	}
+
 	if *flagConfigPath != "" {
 		cfg, err = labeller.LoadConfig(*flagConfigPath)
 		if err != nil {
@@ -64,7 +75,8 @@ func main() {
 	} else {
 		cfg = &labeller.Config{
 			Namespaces:        namespaces,
-			Interval:          interval,
+			Interval:          intervalDuration,
+			ResyncThreshold:   thresholdDuration,
 			LabelPrefix:       *labelPrefix,
 			PrometheusAddr:    *promAddr,
 			WellknownEndpoint: *wellknownEndpoint,

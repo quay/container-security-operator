@@ -183,7 +183,7 @@ func (l *Labeller) processNextItem() bool {
 		return true
 	}
 
-	utilruntime.HandleError(fmt.Errorf("Failed with : %w", key, err))
+	utilruntime.HandleError(fmt.Errorf("%s failed with : %w", key, err))
 	l.queue.AddRateLimited(key)
 	level.Info(l.logger).Log("msg", "Requeued item", "key", key.(string))
 

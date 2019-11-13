@@ -385,7 +385,6 @@ func (l *Labeller) SecurityLabelPod(key string) error {
 			continue
 		}
 
-		// TODO(kleesc): Force rescan after interval
 		if !exists {
 			layerData, err := l.sync(img)
 			if err != nil {

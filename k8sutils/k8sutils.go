@@ -113,10 +113,8 @@ func UpdatePod(pclient clientv1.PodInterface, pod *v1.Pod) error {
 
 func PodRunningAndReady(pod *v1.Pod) (bool, error) {
 	switch pod.Status.Phase {
-	case v1.PodFailed:
-		return false, fmt.Errorf("Pod phase not running: failed")
-	case v1.PodSucceeded:
-		return false, fmt.Errorf("Pod phase not running: succeeded")
+	case v1.PodFailed, v1.PodSucceeded, v1.PodUnknown, v1.PodPending:
+		return false, fmt.Errorf("Pod phase not running: %s", pod.Status.Phase)
 	case v1.PodRunning:
 		for _, cond := range pod.Status.Conditions {
 			if cond.Type != v1.PodReady {

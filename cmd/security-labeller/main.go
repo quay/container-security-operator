@@ -89,7 +89,7 @@ func main() {
 	// Start Labeller
 	l.Run(ctx.Done())
 
-	// Wait for interupt
+	// Wait for interrupt
 	waitForSignals(syscall.SIGINT, syscall.SIGTERM)
 	cancel()
 }

@@ -155,7 +155,7 @@ func PodAddOrUpdateLabels(pod *v1.Pod, labels map[string]string) {
 }
 
 func ValidLabelKey(key string) (bool, error) {
-	// Optional DNS hostname and label key name are seperated by "/"
+	// Optional DNS hostname and label key name are separated by "/"
 	fullKey := strings.Split(key, "/")
 	if len(fullKey) > 2 {
 		return false, fmt.Errorf("Invalid key: cannot contain more than 1 \"/\"")

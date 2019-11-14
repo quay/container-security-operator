@@ -12,6 +12,7 @@ import (
 	"github.com/quay/container-security-operator/labeller"
 
 	log "github.com/go-kit/kit/log"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type arrayFlags []string
@@ -21,7 +22,7 @@ func (flags *arrayFlags) String() string {
 }
 
 func (flags *arrayFlags) Set(value string) error {
-	*flags = append(*flags, value)
+	*flags = strings.Split(value, ",")
 	return nil
 }
 
@@ -36,7 +37,7 @@ func main() {
 	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 
 	var namespaces arrayFlags
-	flag.Var(&namespaces, "namespace", "Namespace to scan.")
+	flag.Var(&namespaces, "namespaces", "Namespaces to scan, separated by commas. Leave empty to scan all namespaces.")
 	flagConfigPath := flag.String("config", "", "Load configuration from file.")
 	promAddr := flag.String("promAddr", ":8081", "Prometheus metrics endpoint.")
 	resyncInterval := flag.String("resyncInterval", "30m", "Controller resync interval.")
@@ -62,6 +63,9 @@ func main() {
 			panic(err)
 		}
 	} else {
+		if len(namespaces) == 1 && namespaces[0] == corev1.NamespaceAll {
+			namespaces = []string{}
+		}
 		cfg = &labeller.Config{
 			Namespaces:        namespaces,
 			Interval:          interval,

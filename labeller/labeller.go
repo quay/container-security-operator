@@ -288,6 +288,24 @@ func (l *Labeller) waitForCacheSync(stopc <-chan struct{}) error {
 	return nil
 }
 
+func (l *Labeller) sync(img *image.Image) (*secscan.Layer, error) {
+	wellknownClient, err := l.secscanClient.Wellknown(img.Host, l.wellKnownEndpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	manifestSecurityTemplate, err := wellknownClient.ManifestSecurityTemplate()
+	if err != nil {
+		return nil, err
+	}
+
+	layerData, err := l.secscanClient.GetLayerDataFromTemplate(manifestSecurityTemplate, img, true, true)
+	if err != nil {
+		return nil, err
+	}
+	return layerData, nil
+}
+
 func (l *Labeller) SecurityLabelPod(key string) error {
 	ns := strings.Split(key, "/")[0]
 	podClient := l.kclient.CoreV1().Pods(ns)
@@ -358,30 +376,9 @@ func (l *Labeller) SecurityLabelPod(key string) error {
 
 		// TODO(kleesc): Force rescan after interval
 		if !exists {
-			wellknownClient, err := l.secscanClient.Wellknown(img.Host, l.wellKnownEndpoint)
+			layerData, err := l.sync(img)
 			if err != nil {
-				level.Warn(l.logger).Log("msg", "Failed to query well-known endpoint",
-					"url", fmt.Sprintf("%s/%s", img.Host, l.wellKnownEndpoint),
-					"key", key,
-					"err", err,
-				)
-				continue
-			}
-
-			manifestSecurityTemplate, err := wellknownClient.ManifestSecurityTemplate()
-			if err != nil {
-				level.Warn(l.logger).Log("msg", "Failed to get manifest security template",
-					"url", fmt.Sprintf("%s/%s", img.Host, l.wellKnownEndpoint),
-					"template", manifestSecurityTemplate,
-					"key", key,
-					"err", err,
-				)
-				continue
-			}
-
-			layerData, err := l.secscanClient.GetLayerDataFromTemplate(manifestSecurityTemplate, img, true, true)
-			if err != nil {
-				level.Error(l.logger).Log("msg", "Error getting image's manifest data", "key", key, "err", err)
+				level.Error(l.logger).Log("msg", "Failed to sync layer data", "key", key, "err", err)
 				continue
 			}
 
@@ -413,6 +410,30 @@ func (l *Labeller) SecurityLabelPod(key string) error {
 		}
 
 		imgManifestVuln = obj.(*secscanv1alpha1.ImageManifestVuln)
+
+		// Check if the spec needs to be resynced
+		lastUpdateTime, err := lastManfestUpdateTime(imgManifestVuln)
+		if err != nil {
+			level.Error(l.logger).Log("msg", "Failed to parse ImageManifestVuln's lastUpdate", "manifestKey", manifestKey, "key", key, "err", err)
+			continue
+		}
+		if time.Now().UTC().Sub(*lastUpdateTime) > l.resyncThreshold {
+			level.Info(l.logger).Log("msg", "Resyncing ImageManifestVuln", manifestKey, "key", key, "err", err)
+			layerData, err := l.sync(img)
+			if err != nil {
+				level.Error(l.logger).Log("msg", "Failed to resync layer data", "key", key, "err", err)
+				continue
+			}
+
+			imgManifestVuln, err = updateImageManifestVulnSpec(imgManifestVuln, layerData)
+			if err != nil {
+				level.Error(l.logger).Log("msg", "Failed to update ImageManifestVuln spec", "key", manifestKey, "err", err)
+				continue
+			}
+
+			imgManifestVuln = updateImageManifestVulnLastUpdate(imgManifestVuln)
+		}
+
 		imgManifestVuln, _ = addAffectedPod(key, img.ContainerID, imgManifestVuln)
 
 		updatedVuln, err := imageManifestVulnClient.Update(imgManifestVuln)

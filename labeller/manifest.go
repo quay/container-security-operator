@@ -14,7 +14,7 @@ import (
 )
 
 var labelPrefix = "secscan"
-var timestampLayout = "2006-01-02 15:04:05 -0700 MST"
+var timestampLayoutUTC = "2006-01-02 15:04:05 -0700 MST"
 
 type vulnerabilityCount struct {
 	Unknown           int
@@ -60,11 +60,21 @@ func (c *vulnerabilityCount) HighestSeverity() string {
 	return ""
 }
 
+func lastManfestUpdateTime(manifest *secscanv1alpha1.ImageManifestVuln) (*time.Time, error) {
+	lastUpdate := manifest.Status.LastUpdate
+	t, err := time.Parse(timestampLayoutUTC, lastUpdate)
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
 func buildImageManifestVuln(namespace, image, manifestDigest string, layer *secscan.Layer) (*secscanv1alpha1.ImageManifestVuln, error) {
 	name := manifestName(manifestDigest)
 
 	imgManifestVuln := &secscanv1alpha1.ImageManifestVuln{
 		ObjectMeta: metav1.ObjectMeta{
+			Labels:      make(map[string]string),
 			Annotations: make(map[string]string),
 			Name:        name,
 			Namespace:   namespace,
@@ -79,8 +89,22 @@ func buildImageManifestVuln(namespace, image, manifestDigest string, layer *secs
 		},
 	}
 
+	imgManifestVuln, err := updateImageManifestVulnSpec(imgManifestVuln, layer)
+	if err != nil {
+		return nil, err
+	}
+	imgManifestVuln = updateImageManifestVulnLastUpdate(imgManifestVuln)
+
+	return imgManifestVuln, nil
+}
+
+func updateImageManifestVulnLastUpdate(manifest *secscanv1alpha1.ImageManifestVuln) *secscanv1alpha1.ImageManifestVuln {
+	manifest.Status.LastUpdate = time.Now().UTC().String()
+	return manifest
+}
+
+func updateImageManifestVulnSpec(manifest *secscanv1alpha1.ImageManifestVuln, layer *secscan.Layer) (*secscanv1alpha1.ImageManifestVuln, error) {
 	aggVulnCount := &vulnerabilityCount{}
-	labels := make(map[string]string)
 	vulnerableFeatures := []*secscanv1alpha1.Feature{}
 
 	for _, feature := range layer.Features {
@@ -133,12 +157,9 @@ func buildImageManifestVuln(namespace, image, manifestDigest string, layer *secs
 		}
 	}
 
-	imgManifestVuln, _ = addAggregatedCountToStatus(aggVulnCount, imgManifestVuln)
-	imgManifestVuln.Status.LastUpdate = time.Now().UTC().String()
-	imgManifestVuln.Spec.Features = vulnerableFeatures
-	imgManifestVuln.ObjectMeta.Labels = labels
-
-	return imgManifestVuln, nil
+	manifest, _ = addAggregatedCountToStatus(aggVulnCount, manifest)
+	manifest.Spec.Features = vulnerableFeatures
+	return manifest, nil
 }
 
 func addAggregatedCountToStatus(aggVulnCount *vulnerabilityCount, manifest *secscanv1alpha1.ImageManifestVuln) (*secscanv1alpha1.ImageManifestVuln, bool) {

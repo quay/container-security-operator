@@ -7,7 +7,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 
@@ -20,18 +19,18 @@ var resourceVersionSeparator = ","
 // Implements "k8s.io/client-go/tools/cache.ListerWatcher"
 type multiListerWatcher []cache.ListerWatcher
 
-func NewMultiNamespaceListerWatcher(getter cache.Getter, resource string, namespaces []string, fieldSelector fields.Selector) cache.ListerWatcher {
+func NewMultiNamespaceListerWatcher(namespaces []string, f func(string) cache.ListerWatcher) cache.ListerWatcher {
 	if len(namespaces) == 0 {
-		return cache.NewListWatchFromClient(getter, resource, corev1.NamespaceAll, fieldSelector)
+		return f(corev1.NamespaceAll)
 	}
 
 	if len(namespaces) == 1 {
-		return cache.NewListWatchFromClient(getter, resource, namespaces[0], fieldSelector)
+		return f(namespaces[0])
 	}
 
 	var lws []cache.ListerWatcher
 	for _, ns := range namespaces {
-		lws = append(lws, cache.NewListWatchFromClient(getter, resource, ns, fieldSelector))
+		lws = append(lws, f(ns))
 	}
 	return multiListerWatcher(lws)
 }

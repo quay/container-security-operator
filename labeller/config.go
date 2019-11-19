@@ -11,6 +11,7 @@ import (
 type Config struct {
 	Namespaces        []string               `yaml:"namespaces"`
 	Interval          time.Duration          `yaml:"interval"`
+	ResyncThreshold   time.Duration          `yaml:"resyncThreshold"`
 	SecurityScanner   SecurityScannerOptions `yaml:"securityScanner"`
 	LabelPrefix       string                 `yaml:"labelPrefix"`
 	PrometheusAddr    string                 `yaml:"prometheusAddr"`

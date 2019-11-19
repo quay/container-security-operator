@@ -9,7 +9,7 @@ build:
 
 .PHONY: run
 run: build
-	./bin/security-labeller -kubeconfig ~/.kube/config  -config example-config.yaml
+	./bin/security-labeller -kubeconfig ~/.kube/config  -config example/example-config.yaml
 
 .PHONY: installcrds
 installcrds:

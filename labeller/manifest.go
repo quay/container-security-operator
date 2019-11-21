@@ -196,6 +196,7 @@ func addAffectedPod(key, containerID string, manifest *secscanv1alpha1.ImageMani
 	if containerIds, ok := manifest.Status.AffectedPods[key]; ok {
 		if !contains(containerIds, containerID) {
 			containerIds = append(containerIds, containerID)
+			manifest.Status.AffectedPods[key] = containerIds
 			changed = true
 		}
 		return manifest, changed

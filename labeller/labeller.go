@@ -17,7 +17,8 @@ import (
 	"github.com/go-kit/kit/log/level"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/fields"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	"k8s.io/client-go/kubernetes"
@@ -102,10 +103,15 @@ func New(config *Config, kubeconfig string, logger log.Logger) (*Labeller, error
 	l.queue = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "labeller")
 
 	multiNamespacePodListWatcher := NewMultiNamespaceListerWatcher(
-		kclient.CoreV1().RESTClient(),
-		"pods",
 		l.namespaces,
-		fields.Everything(),
+		func(namespace string) cache.ListerWatcher {
+			return &cache.ListWatch{
+				ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+					return l.kclient.CoreV1().Pods(namespace).List(options)
+				},
+				WatchFunc: l.kclient.CoreV1().Pods(namespace).Watch,
+			}
+		},
 	)
 	l.podInformer = cache.NewSharedIndexInformer(
 		multiNamespacePodListWatcher,
@@ -120,10 +126,15 @@ func New(config *Config, kubeconfig string, logger log.Logger) (*Labeller, error
 	})
 
 	multiNamespaceImageManifestVulnListWatcher := NewMultiNamespaceListerWatcher(
-		l.sclient.SecscanV1alpha1().RESTClient(),
-		"imagemanifestvulns",
 		l.namespaces,
-		fields.Everything(),
+		func(namespace string) cache.ListerWatcher {
+			return &cache.ListWatch{
+				ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+					return l.sclient.SecscanV1alpha1().ImageManifestVulns(namespace).List(options)
+				},
+				WatchFunc: l.sclient.SecscanV1alpha1().ImageManifestVulns(namespace).Watch,
+			}
+		},
 	)
 	l.imageManifestVulnInformer = cache.NewSharedIndexInformer(
 		multiNamespaceImageManifestVulnListWatcher,
@@ -183,7 +194,7 @@ func (l *Labeller) processNextItem() bool {
 		return true
 	}
 
-	utilruntime.HandleError(fmt.Errorf("Failed with : %w", key, err))
+	utilruntime.HandleError(fmt.Errorf("%s failed with : %w", key, err))
 	l.queue.AddRateLimited(key)
 	level.Info(l.logger).Log("msg", "Requeued item", "key", key.(string))
 
@@ -374,7 +385,6 @@ func (l *Labeller) SecurityLabelPod(key string) error {
 			continue
 		}
 
-		// TODO(kleesc): Force rescan after interval
 		if !exists {
 			layerData, err := l.sync(img)
 			if err != nil {

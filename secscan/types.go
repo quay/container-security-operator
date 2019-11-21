@@ -9,10 +9,14 @@ import (
 	"github.com/quay/container-security-operator/image"
 )
 
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Interface
+
 type Interface interface {
 	Wellknown(host, endpoint string) (WellknownInterface, error)
 	GetLayerDataFromTemplate(manifestTemplate string, image *image.Image, features, vulnerabilities bool) (*Layer, error)
 }
+
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . WellknownInterface
 
 type WellknownInterface interface {
 	ViewImageTemplate() (string, error)

@@ -118,6 +118,10 @@ func (img *Image) String() string {
 		r = img.URL(img.Host, img.Namespace, img.Repository)
 	}
 
+	if len(img.Tag) == 0 {
+		return strings.Join([]string{r, img.Digest}, "@")
+	}
+
 	return strings.Join([]string{r, img.Tag}, ":")
 }
 
@@ -209,6 +213,11 @@ func ParseContainerStatus(containerStatus v1.ContainerStatus) (*Image, error) {
 
 	// Set container id
 	image.ContainerID = containerStatus.ContainerID
+
+	// Check if image was pulled by digest or tag
+	if len(strings.SplitN(containerStatus.Image, "@", 2)) > 1 {
+		return image, nil
+	}
 
 	// Set tag name
 	s := strings.Split(containerStatus.Image, ":")

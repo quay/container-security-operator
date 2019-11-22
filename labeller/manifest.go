@@ -205,8 +205,11 @@ func addAffectedPod(key, containerID string, manifest *secscanv1alpha1.ImageMani
 	if manifest.Status.AffectedPods == nil {
 		manifest.Status.AffectedPods = make(map[string][]string)
 	}
-
 	manifest.Status.AffectedPods[key] = append(manifest.Status.AffectedPods[key], containerID)
+
+	if manifest.ObjectMeta.Labels == nil {
+		manifest.ObjectMeta.Labels = make(map[string]string)
+	}
 	manifest.ObjectMeta.Labels[key] = "true"
 
 	changed = true
@@ -215,6 +218,7 @@ func addAffectedPod(key, containerID string, manifest *secscanv1alpha1.ImageMani
 
 func removeAffectedPod(key string, manifest *secscanv1alpha1.ImageManifestVuln) (*secscanv1alpha1.ImageManifestVuln, bool) {
 	changed := false
+
 	if _, ok := manifest.Status.AffectedPods[key]; ok {
 		delete(manifest.Status.AffectedPods, key)
 		delete(manifest.ObjectMeta.Labels, key)
@@ -244,11 +248,12 @@ func removeAffectedPodFromManifests(apiclient secscanv1alpha1client.ImageManifes
 
 	for _, manifest := range manifestList.Items {
 		if updatedManifest, changed := removeAffectedPod(key, manifest); changed {
-			updatedManifest, err := apiclient.Update(updatedManifest)
+			updated, err := apiclient.Update(updatedManifest)
 			if err != nil {
 				return fmt.Errorf("Failed to update ImageManifestVuln: %w", err)
 			}
-			if _, err := apiclient.UpdateStatus(updatedManifest); err != nil {
+			updated.Status = updatedManifest.Status
+			if _, err := apiclient.UpdateStatus(updated); err != nil {
 				return fmt.Errorf("Failed to update ImageManifestVuln status: %w", err)
 			}
 		}

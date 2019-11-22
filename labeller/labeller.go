@@ -334,6 +334,13 @@ func (l *Labeller) SecurityLabelPod(key string) error {
 			return err
 		}
 
+		// Garbage collect unreferenced manifests and remove dangling pods from existing manifests
+		level.Info(l.logger).Log("msg", "Garbage collecting unreferenced ImageManifestVulns", "key", key)
+		if err := garbageCollectManifests(podClient, imageManifestVulnClient); err != nil {
+			level.Error(l.logger).Log("msg", "Failed to garbage collect unreferenced ImageManifestVulns", "err", err)
+			return fmt.Errorf("Failed to garbage collect unreferenced ImageManifestVulns: %w", err)
+		}
+
 		return nil
 	}
 

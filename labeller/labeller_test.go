@@ -376,7 +376,7 @@ func TestForcedResyncThreshold(t *testing.T) {
 	// Resyncing a pod too early should have no effects
 	err = fakeLabeller.SecurityLabelPod(runningPod.Namespace + "/" + runningPod.Name)
 	assert.NoError(t, err)
-	// assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
+	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
 	manifest, err = c.getManifest(ns, manifestNameFromImageID(imageIDs[0]), metav1.GetOptions{})
 	assert.NoError(t, err)
@@ -392,9 +392,55 @@ func TestForcedResyncThreshold(t *testing.T) {
 	// Rescan the pod and check for new lastUpdate
 	err = fakeLabeller.SecurityLabelPod(runningPod.Namespace + "/" + runningPod.Name)
 	assert.NoError(t, err)
+	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
 	updatedManifest, err := c.getManifest(ns, manifestNameFromImageID(imageIDs[0]), metav1.GetOptions{})
 	assert.NoError(t, err)
 	newTimestamp, _ := lastManfestUpdateTime(updatedManifest)
 	assert.True(t, newTimestamp.After(*initialTimestamp))
+}
+
+// TestGarbageCollectManifest tests that ImageManifestVulns are garbage collected when pods are deleted
+func TestGarbageCollectManifest(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	testImageID := "quay.io/test/redis@sha256:94033a42da840b970fd9d2b04dae5fec56add2714ca674a758d030ce5acba27e"
+	imageIDs := []string{testImageID}
+	ns := generateNamespaceForTest(t)
+
+	c := newTestClient()
+	setupFakeSecscanInterface(c, testVulnerableLayer)
+
+	fakeLabeller := newFakeLabeller(ctx, c, newConfigForTest([]string{ns}, 5*time.Minute, 5*time.Minute, "testLabel", ":8081", ".well-known/app-capabilities"))
+
+	// Create a running pod
+	runningPod := createRunningPod(t, c, ns, "Test-Running-Pod", imageIDs)
+	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
+
+	// Scan the pod
+	err := fakeLabeller.SecurityLabelPod(runningPod.Namespace + "/" + runningPod.Name)
+	assert.NoError(t, err)
+	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
+
+	// Get the associated manifest and check for pod reference
+	manifest, err := c.getManifest(ns, manifestNameFromImageID(imageIDs[0]), metav1.GetOptions{})
+	assert.NoError(t, err)
+	_, ok := manifest.Status.AffectedPods[runningPod.Namespace+"/"+runningPod.Name]
+	assert.True(t, ok)
+
+	// Delete the pod
+	assert.NoError(t, c.deletePod(runningPod.Namespace, runningPod.Name, &metav1.DeleteOptions{}))
+	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
+
+	// Delete event reconciliation
+	err = fakeLabeller.SecurityLabelPod(runningPod.Namespace + "/" + runningPod.Name)
+	assert.NoError(t, err)
+	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
+
+	// Check that the pod reference was deleted
+	_, err = c.getManifest(ns, manifestNameFromImageID(imageIDs[0]), metav1.GetOptions{})
+	if assert.Error(t, err) {
+		assert.True(t, k8serrors.IsNotFound(err))
+	}
 }

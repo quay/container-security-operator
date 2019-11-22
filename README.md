@@ -1,5 +1,6 @@
-# Container annotation operator
-Kubernetes Pod Security Scanner
+# Container Security Operator 
+
+The Container Security Operator (CSO) brings Quay and Clair metadata to Kubernetes / OpenShift. Starting with vulnerability information the scope will get expanded over time. If it runs on OpenShift, the corresponding vulnerability information inside the OCP Console. The Container Security Operator enables cluster administrators to monitor known container image vulnerabilites in pods running on their Kubernetes cluster. The controller sets up a watch on pods in the specified namespace(s) and queries the container registry for vulnerability information. If the container registry supports image scanning, such as [Quay](https://github.com/quay/quay) with [Clair](https://github.com/quay/clair), then the Operator will expose any vulnerabilities found via the Kubernetes API in an `ImageManifestVuln` object.  This Operator requires no additional configuration after deployment, and will begin watching pods and populating `ImageManifestVulns` immediately once installed.
 
 ## Example config
 
@@ -15,9 +16,9 @@ securitylabeller:
     - default
     - dev
   securityScanner:
-      host: "https://quay.io"
-      apiVersion: 1
-      type: "Quay"
+    host: "https://quay.io"
+    apiVersion: 1
+    type: "Quay"
     
 ```
 
@@ -25,6 +26,18 @@ securitylabeller:
 
 - Scan pods and store the the vulnerability information in CRs (by image manifest)
 - Metrics via [Prometheus](https://prometheus.io)
+
+## Deployment
+
+This Operator should be deployed using the [Operator Lifecycle Manager (OLM)](https://github.com/operator-framework/operator-lifecycle-manager), which takes care of RBAC permissions, dependency resolution, and automatic upgrades.
+
+### Kubernetes
+
+This Operator is published upstream on [operatorhub.io](https://operatorhub.io/operator/container-security-operator).
+
+### OpenShift
+
+This Operator will be available via **OperatorHub**.
 
 ## Development Environment
 
@@ -40,6 +53,36 @@ make run
 Regenerating clientsets, listers, and informers:
 ```
 TODO
+```
+
+### Deploying using OLM
+
+Follow these steps to package and deploy the Operator from local source code using OLM:
+
+1. Make any code changes to the source code
+2. Build and push Operator container image
+```
+$ docker build -t quay.io/<your-namespace>/container-security-operator .
+$ docker push quay.io/<your-namespace>/container-security-operator
+```
+3. Change `image` field in `container-security-operator.v1.0.0.clusterserviceversion.yaml` to point to your image
+4. Build and push `CatalogSource` container image
+```
+$ cd deploy/
+$ docker build -t quay.io/<your-namespace>/cso-catalog .
+$ docker push quay.io/<your-namespace>/cso-catalog
+```
+5. Change `image` field in `cso.catalogsource.yaml` to point to your image
+6. Create `CatalogSource` in Kubernetes cluster w/ OLM installed
+```
+# Upstream Kubernetes
+$ kubectl create -n olm -f deploy/cso.catalogsource.yaml
+# OpenShift
+$ kubectl create -n openshift-marketplace -f deploy/cso.catalogsource.yaml
+```
+7. After a few seconds, your Operator package should be available to create a `Subscription` to.
+```
+$ kubectl get packagemanifest container-security-operator
 ```
 
 ## Examples

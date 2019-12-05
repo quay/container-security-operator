@@ -29,21 +29,22 @@ func (c *Client) Wellknown(host, endpoint string) (WellknownInterface, error) {
 }
 
 func (c *Client) GetLayerDataFromTemplate(template string, image *image.Image, features, vulnerabilities bool) (*Layer, error) {
-	replacer := strings.NewReplacer("{namespace}", image.Namespace, "{reponame}", image.Repository, "{digest}", image.Digest)
-	requestURI := replacer.Replace(template)
-	url, err := url.ParseRequestURI(requestURI)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to parse security manifest URL %s: %w", requestURI, err)
+	params := map[string]string{
+		"features":        strconv.FormatBool(features),
+		"vulnerabilities": strconv.FormatBool(vulnerabilities),
 	}
 
-	req := rest.NewRequest(http.DefaultClient, "GET", url, "")
-	req = req.SetParam("features", strconv.FormatBool(features))
-	req = req.SetParam("vulnerabilities", strconv.FormatBool(vulnerabilities))
+	req, err := layerDataFromTemplateRequest(template, "GET", image, params)
+	if err != nil {
+		return nil, err
+	}
+
 	resp, err := req.Do()
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
+
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("Request returned non-200 response: %s", resp.Status)
 	}
@@ -64,4 +65,24 @@ func (c *Client) GetLayerDataFromTemplate(template string, image *image.Image, f
 	}
 
 	return &securityResponse.Data.Layer, nil
+}
+
+func layerDataFromTemplateRequest(template, method string, img *image.Image, params map[string]string) (*rest.Request, error) {
+	replacer := strings.NewReplacer("{namespace}", img.Namespace, "{reponame}", img.Repository, "{digest}", img.Digest)
+	requestURI := replacer.Replace(template)
+	url, err := url.ParseRequestURI(requestURI)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to parse security manifest URL %s: %w", requestURI, err)
+	}
+
+	req := rest.NewRequest(http.DefaultClient, "GET", url, "")
+	if img.Auth != "" {
+		req = req.SetHeader("Authorization", fmt.Sprintf("Basic %s", img.Auth))
+	}
+
+	for key, val := range params {
+		req = req.SetParam(key, val)
+	}
+
+	return req, err
 }

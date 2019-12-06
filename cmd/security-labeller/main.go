@@ -43,10 +43,6 @@ func main() {
 	resyncInterval := flag.String("resyncInterval", "30m", "Controller resync interval.")
 	resyncThreshold := flag.String("resyncThreshold", "1h", "Minimum threshold to resync ImageManifestVulns.")
 	labelPrefix := flag.String("labelPrefix", "secscan", "CR label prefix.")
-	scannerHost := flag.String("scannerHost", "https://quay.io", "Scanner endpoint.")
-	scannerToken := flag.String("scannerToken", "", "Scanner bearer token.")
-	scannerVersion := flag.Int("scannerVersion", 1, "Scanner api version.")
-	scannerType := flag.String("scannerType", "quay", "Scanner type.")
 	wellknownEndpoint := flag.String("wellknownEndpoint", ".well-known/app-capabilities", "Wellknown endpoint")
 
 	flagKubeConfigPath := flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
@@ -84,12 +80,6 @@ func main() {
 			LabelPrefix:       *labelPrefix,
 			PrometheusAddr:    *promAddr,
 			WellknownEndpoint: *wellknownEndpoint,
-			SecurityScanner: labeller.SecurityScannerOptions{
-				*scannerHost,
-				*scannerToken,
-				*scannerVersion,
-				*scannerType,
-			},
 		}
 	}
 

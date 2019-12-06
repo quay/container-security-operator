@@ -14,12 +14,7 @@ securitylabeller:
   labelPrefix: secscan # Security labels' "namespace"
   namespaces: # List of namespaces to label in the cluster
     - default
-    - dev
-  securityScanner:
-    host: "https://quay.io"
-    apiVersion: 1
-    type: "Quay"
-    
+    - dev  
 ```
 
 ## Features

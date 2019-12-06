@@ -9,20 +9,12 @@ import (
 )
 
 type Config struct {
-	Namespaces        []string               `yaml:"namespaces"`
-	Interval          time.Duration          `yaml:"interval"`
-	ResyncThreshold   time.Duration          `yaml:"resyncThreshold"`
-	SecurityScanner   SecurityScannerOptions `yaml:"securityScanner"`
-	LabelPrefix       string                 `yaml:"labelPrefix"`
-	PrometheusAddr    string                 `yaml:"prometheusAddr"`
-	WellknownEndpoint string                 `yaml:"wellknownEndpoint"`
-}
-
-type SecurityScannerOptions struct {
-	Host       string `yaml:"host"`
-	Token      string `yaml:"token"`
-	APIVersion int    `yaml:"apiVersion"`
-	Type       string `yaml:"type"`
+	Namespaces        []string      `yaml:"namespaces"`
+	Interval          time.Duration `yaml:"interval"`
+	ResyncThreshold   time.Duration `yaml:"resyncThreshold"`
+	LabelPrefix       string        `yaml:"labelPrefix"`
+	PrometheusAddr    string        `yaml:"prometheusAddr"`
+	WellknownEndpoint string        `yaml:"wellknownEndpoint"`
 }
 
 // YAML configuration with all SecurityLabeller configuration under top-level "security-labeller" key

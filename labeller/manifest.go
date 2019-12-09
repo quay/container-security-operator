@@ -310,3 +310,27 @@ func contains(s []string, i string) bool {
 	}
 	return false
 }
+
+// Returns the number of images, and an aggregate count of the vulnerabilities in the images,
+// by severity.
+func aggVulnerabilityCount(manifestclient secscanv1alpha1client.ImageManifestVulnInterface) (*vulnerabilityCount, int, error) {
+	vulnCount := &vulnerabilityCount{}
+	manifestList, err := manifestclient.List(metav1.ListOptions{})
+	if err != nil {
+		return nil, 0, fmt.Errorf("Failed to list ImageManifestVulns: %w", err)
+	}
+
+	manifestCount := len(manifestList.Items)
+
+	for _, manifest := range manifestList.Items {
+		vulnCount.Unknown += manifest.Status.UnknownCount
+		vulnCount.Negligible += manifest.Status.NegligibleCount
+		vulnCount.Low += manifest.Status.LowCount
+		vulnCount.Medium += manifest.Status.MediumCount
+		vulnCount.High += manifest.Status.HighCount
+		vulnCount.Critical += manifest.Status.CriticalCount
+		vulnCount.Defcon1 += manifest.Status.Defcon1Count
+	}
+
+	return vulnCount, manifestCount, nil
+}

@@ -8,6 +8,7 @@ import (
 
 	secscanv1alpha1 "github.com/quay/container-security-operator/apis/secscan/v1alpha1"
 	secscanclient "github.com/quay/container-security-operator/generated/versioned"
+	secscanv1alpha1client "github.com/quay/container-security-operator/generated/versioned/typed/secscan/v1alpha1"
 	"github.com/quay/container-security-operator/image"
 	"github.com/quay/container-security-operator/k8sutils"
 	"github.com/quay/container-security-operator/prometheus"
@@ -27,9 +28,6 @@ import (
 )
 
 var (
-	highestLabel  = "highest"
-	FixablesLabel = "fixables"
-
 	UnknownLabel    = "Unknown"
 	NegligibleLabel = "Negligible"
 	LowLabel        = "Low"
@@ -37,9 +35,6 @@ var (
 	HighLabel       = "High"
 	CriticalLabel   = "Critical"
 	Defcon1Label    = "Defcon1"
-
-	lastScanAnnotation   = "lastScan"
-	imageVulnsAnnotation = "imageVulns"
 )
 
 type Labeller struct {
@@ -59,8 +54,6 @@ type Labeller struct {
 	resyncThreshold time.Duration
 
 	prometheus *prometheus.Server
-
-	vulnerabilities *lockableVulnerabilities
 }
 
 func New(config *Config, kubeconfig string, logger log.Logger) (*Labeller, error) {
@@ -96,7 +89,6 @@ func New(config *Config, kubeconfig string, logger log.Logger) (*Labeller, error
 		resyncThreshold:   config.ResyncThreshold,
 		wellKnownEndpoint: config.WellknownEndpoint,
 		prometheus:        prometheus.NewServer(config.PrometheusAddr),
-		vulnerabilities:   NewLockableVulnerabilites(),
 	}
 
 	l.namespaces = config.Namespaces[:]
@@ -180,6 +172,8 @@ func (l *Labeller) worker() {
 }
 
 func (l *Labeller) processNextItem() bool {
+	prometheus.PromQueueSize.Set(float64(l.queue.Len()))
+
 	// Will block until there is an item to process
 	key, quit := l.queue.Get()
 	if quit {
@@ -188,7 +182,7 @@ func (l *Labeller) processNextItem() bool {
 	}
 	defer l.queue.Done(key)
 
-	err := l.SecurityLabelPod(key.(string))
+	err := l.Reconcile(key.(string))
 	if err == nil {
 		l.queue.Forget(key)
 		return true
@@ -219,6 +213,7 @@ func (l *Labeller) handleAddPod(obj interface{}) {
 	if key, ok := l.keyFunc(pod); ok {
 		l.queue.Add(key)
 		level.Debug(l.logger).Log("msg", "Pod added", "key", key)
+		prometheus.PromPodEventsTotal.WithLabelValues("add", pod.Namespace).Inc()
 	}
 }
 
@@ -231,6 +226,7 @@ func (l *Labeller) handleDeletePod(obj interface{}) {
 	if key, ok := l.keyFunc(pod); ok {
 		l.queue.Add(key)
 		level.Debug(l.logger).Log("msg", "Pod deleted", "key", key)
+		prometheus.PromPodEventsTotal.WithLabelValues("delete", pod.Namespace).Inc()
 	}
 }
 
@@ -244,6 +240,7 @@ func (l *Labeller) handleUpdatePod(oldObj, newObj interface{}) {
 	if key, ok := l.keyFunc(newPod); ok {
 		l.queue.Add(key)
 		level.Debug(l.logger).Log("msg", "Pod updated", "key", key)
+		prometheus.PromPodEventsTotal.WithLabelValues("update", newPod.Namespace).Inc()
 	}
 }
 
@@ -252,6 +249,7 @@ func (l *Labeller) handleAddImageManifestVuln(obj interface{}) {
 	if key, ok := l.keyFunc(imgmanifestvuln); ok {
 		// Nothing to do. ImageManifestVulns should be treated as just data
 		level.Debug(l.logger).Log("msg", "ImageManifestVuln added", "key", key)
+		prometheus.PromImageManifestVulnEventsTotal.WithLabelValues("add", imgmanifestvuln.Namespace).Inc()
 	}
 }
 
@@ -260,6 +258,7 @@ func (l *Labeller) handleDeleteImageManifestVuln(obj interface{}) {
 	if key, ok := l.keyFunc(imgmanifestvuln); ok {
 		// Nothing to do. ImageManifestVulns should be treated as just data
 		level.Debug(l.logger).Log("msg", "ImageManifestVuln deleted", "key", key)
+		prometheus.PromImageManifestVulnEventsTotal.WithLabelValues("delete", imgmanifestvuln.Namespace).Inc()
 	}
 }
 
@@ -272,6 +271,7 @@ func (l *Labeller) handleUpdateImageManifestVuln(oldObj, newObj interface{}) {
 	if key, ok := l.keyFunc(imgmanifestvuln); ok {
 		// Nothing to do. ImageManifestVulns should be treated as just data
 		level.Debug(l.logger).Log("msg", "ImageManifestVuln updated", "key", key)
+		prometheus.PromImageManifestVulnEventsTotal.WithLabelValues("update", imgmanifestvuln.Namespace).Inc()
 	}
 }
 
@@ -300,6 +300,8 @@ func (l *Labeller) waitForCacheSync(stopc <-chan struct{}) error {
 }
 
 func (l *Labeller) sync(img *image.Image) (*secscan.Layer, error) {
+	defer prometheus.ObserveSecscanRequestDuration(img.Host)()
+
 	wellknownClient, err := l.secscanClient.Wellknown(img.Host, l.wellKnownEndpoint)
 	if err != nil {
 		return nil, err
@@ -311,13 +313,17 @@ func (l *Labeller) sync(img *image.Image) (*secscan.Layer, error) {
 	}
 
 	layerData, err := l.secscanClient.GetLayerDataFromTemplate(manifestSecurityTemplate, img, true, true)
+	prometheus.PromSecscanRequestsTotal.WithLabelValues(img.Host).Inc()
 	if err != nil {
 		return nil, err
 	}
+
 	return layerData, nil
 }
 
-func (l *Labeller) SecurityLabelPod(key string) error {
+func (l *Labeller) Reconcile(key string) error {
+	defer prometheus.ObserveReconciliationDuration()()
+
 	ns := strings.Split(key, "/")[0]
 	podClient := l.kclient.CoreV1().Pods(ns)
 	secretClient := l.kclient.CoreV1().Secrets(ns)
@@ -331,13 +337,14 @@ func (l *Labeller) SecurityLabelPod(key string) error {
 		// Remove pod references from existing imagemanifestvulns.
 		level.Info(l.logger).Log("msg", "Removing deleted pod from ImageManifestVulns", "key", key)
 		if err := removeAffectedPodFromManifests(imageManifestVulnClient, key); err != nil {
+			level.Error(l.logger).Log("msg", "Failed to remove deleted pod from ImageManifestVulns", "err", err, "key", key)
 			return err
 		}
 
 		// Garbage collect unreferenced manifests and remove dangling pods from existing manifests
 		level.Info(l.logger).Log("msg", "Garbage collecting unreferenced ImageManifestVulns", "key", key)
 		if err := garbageCollectManifests(podClient, imageManifestVulnClient); err != nil {
-			level.Error(l.logger).Log("msg", "Failed to garbage collect unreferenced ImageManifestVulns", "err", err)
+			level.Error(l.logger).Log("msg", "Failed to garbage collect unreferenced ImageManifestVulns", "err", err, "key", key)
 			return fmt.Errorf("Failed to garbage collect unreferenced ImageManifestVulns: %w", err)
 		}
 
@@ -434,6 +441,7 @@ func (l *Labeller) SecurityLabelPod(key string) error {
 			level.Error(l.logger).Log("msg", "Failed to parse ImageManifestVuln's lastUpdate", "manifestKey", manifestKey, "key", key, "err", err)
 			continue
 		}
+
 		if time.Now().UTC().Sub(*lastUpdateTime) > l.resyncThreshold {
 			level.Info(l.logger).Log("msg", "Resyncing ImageManifestVuln", manifestKey, "key", key, "err", err)
 			layerData, err := l.sync(img)
@@ -457,6 +465,7 @@ func (l *Labeller) SecurityLabelPod(key string) error {
 		if err != nil {
 			level.Error(l.logger).Log("msg", "Error updating ImageManifestVuln", "key", manifestKey, "err", err)
 		}
+
 		updatedVuln.Status = imgManifestVuln.Status
 		if _, err := imageManifestVulnClient.UpdateStatus(updatedVuln); err != nil {
 			level.Error(l.logger).Log("msg", "Error updating ImageManifestVuln status", "key", manifestKey, "err", err)
@@ -465,13 +474,18 @@ func (l *Labeller) SecurityLabelPod(key string) error {
 	}
 
 	// Populate prometheus metrics
-	l.promPopulateVulnsCount()
+	l.promPopulateVulnsCount(imageManifestVulnClient)
 
 	return nil
 }
 
-func (l *Labeller) promPopulateVulnsCount() {
-	podVulns := l.vulnerabilities.countTotalVulnerabilities()
+func (l *Labeller) promPopulateVulnsCount(manifestclient secscanv1alpha1client.ImageManifestVulnInterface) {
+	podVulns, images, err := aggVulnerabilityCount(manifestclient)
+	if err != nil {
+		level.Warn(l.logger).Log("msg", "Failed to update aggregate vulnerabilities metrics", "err", err)
+		return
+	}
+	prometheus.PromVulnerableImages.Set(float64(images))
 	prometheus.PromVulnCount.WithLabelValues(UnknownLabel).Set(float64(podVulns.Unknown))
 	prometheus.PromVulnCount.WithLabelValues(NegligibleLabel).Set(float64(podVulns.Negligible))
 	prometheus.PromVulnCount.WithLabelValues(LowLabel).Set(float64(podVulns.Low))
@@ -479,10 +493,6 @@ func (l *Labeller) promPopulateVulnsCount() {
 	prometheus.PromVulnCount.WithLabelValues(HighLabel).Set(float64(podVulns.High))
 	prometheus.PromVulnCount.WithLabelValues(CriticalLabel).Set(float64(podVulns.Critical))
 	prometheus.PromVulnCount.WithLabelValues(Defcon1Label).Set(float64(podVulns.Defcon1))
-}
-
-func (l *Labeller) getLabelKey(keyname string) string {
-	return strings.Join([]string{l.labelPrefix, keyname}, "/")
 }
 
 func (l *Labeller) podInNamespaces(pod *corev1.Pod) bool {

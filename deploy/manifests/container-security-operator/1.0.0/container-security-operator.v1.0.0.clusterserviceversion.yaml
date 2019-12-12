@@ -63,7 +63,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
-                image: quay.io/quay/container-security-operator@sha256:154d7e0295a94fb3d2a97309d711186a98a7308da37a5cd3d50360c6b2ba57de
+                image: quay.io/quay/container-security-operator@sha256:d140b752897a5459d75da7a8b0338252dcea595154e89d1242a70ad3be950014
                 name: container-security-operator
               serviceAccountName: container-security-operator
       permissions:

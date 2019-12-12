@@ -4,4 +4,4 @@ metadata:
   name: container-security-operator
 spec:
   sourceType: grpc
-  image: quay.io/quay/cso-catalog@sha256:e664ffe5d207a537f2b0245e6c10c1d198a8de69c9ffa5aed531c2edb24c355d
+  image: quay.io/quay/cso-catalog@sha256:bcdee2456f81dfe0d2c4ec1e1e29480567033a47ea8859d4520e5275ced649b8

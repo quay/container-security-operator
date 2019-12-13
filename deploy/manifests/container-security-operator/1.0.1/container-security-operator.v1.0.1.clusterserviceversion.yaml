@@ -4,12 +4,12 @@ metadata:
   annotations:
     capabilities: Full Lifecycle
     categories: Security
-    containerImage: quay.io/quay/container-security-operator@sha256:154d7e0295a94fb3d2a97309d711186a98a7308da37a5cd3d50360c6b2ba57de
+    containerImage: quay.io/quay/container-security-operator@sha256:15a4b50d847512b5f404ec1cf72c30c98e073a7f26f1588213bd2e8b6331f016
     createdAt: 2019-11-16 01:03:00
     description: Identify image vulnerabilities in Kubernetes pods
     repository: https://github.com/quay/container-security-operator
     tectonic-visibility: ocs
-  name: container-security-operator.v1.0.0
+  name: container-security-operator.v1.0.1
   namespace: placeholder
 spec:
   customresourcedefinitions:
@@ -21,9 +21,9 @@ spec:
       version: v1alpha1
   description: "The Container Security Operator (CSO) brings Quay and Clair metadata to Kubernetes / OpenShift.\
     \ Starting with vulnerability information the scope will get expanded over time. If it runs on OpenShift,\
-    \ the corresponding vulnerability information inside the OCP Console. The Container Security Operator\
+    \ the corresponding vulnerability information is shown inside the OCP Console. The Container Security Operator\
     \ enables cluster administrators to monitor known container\
-    \ image vulnerabilites in pods running on their Kubernetes cluster. The controller sets up a watch\
+    \ image vulnerabilities in pods running on their Kubernetes cluster. The controller sets up a watch\
     \ on pods in the specified namespace(s) and queries the container registry for vulnerability\
     \ information. If the container registry supports image scanning,\
     \ such as [Quay](https://github.com/quay/quay) with [Clair](https://github.com/quay/clair),\
@@ -63,7 +63,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
-                image: quay.io/quay/container-security-operator@sha256:154d7e0295a94fb3d2a97309d711186a98a7308da37a5cd3d50360c6b2ba57de
+                image: quay.io/quay/container-security-operator@sha256:15a4b50d847512b5f404ec1cf72c30c98e073a7f26f1588213bd2e8b6331f016
                 name: container-security-operator
               serviceAccountName: container-security-operator
       permissions:
@@ -125,4 +125,5 @@ spec:
     matchLabels:
       alm-owner-container-security-operator: container-security-operator
       operated-by: container-security-operator
-  version: 1.0.0
+  version: 1.0.1
+  replaces: container-security-operator.v1.0.0

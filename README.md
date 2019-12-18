@@ -113,8 +113,17 @@ $ kubectl get packagemanifest container-security-operator
 
 ### Using kubectl
 
-Check if a pod has any vulnerability, and list the CVEs, if any:
-
+Get a list of all the pods affected by vulnerable images detected by the Operator:
 ```sh
-$ kubectl get imagemanifestvulns.secscan.quay.redhat.com --selector=test/redis-567899f7cc-tdl2g -o jsonpath='{.items[*].spec.features[*].vulnerabilities[*].name}'
+$ kubectl get imagemanifestvuln --all-namespaces -o json | jq '.items[].status.affectedPods' | jq 'keys' | jq 'unique'
+```
+
+Get a list of all detected CVEs in pods running on the cluster:
+```sh
+$ kubectl get imagemanifestvuln --all-namespaces -o json | jq '[.items[].spec.features[].vulnerabilities[].name'] | jq 'unique'
+```
+
+Check if a pod has any vulnerability, and list the CVEs, if any:
+```sh
+$ kubectl get imagemanifestvulns.secscan.quay.redhat.com --selector=<namespace>/<pod-name> -o jsonpath='{.items[*].spec.features[*].vulnerabilities[*].name}'
 ```

@@ -32,14 +32,7 @@ type Template map[string]string
 // Generate the template key from the given host and key suffix
 // e.g. io.quay.manifest-security
 func appCapabilityKey(host, keySuffix string) string {
-	split := strings.Split(host, ".")
-	for i := len(split)/2 - 1; i >= 0; i-- {
-		opp := len(split) - 1 - i
-		split[i], split[opp] = split[opp], split[i]
-	}
-
-	split = append(split, keySuffix)
-	return strings.Join(split, ".")
+	return strings.Join([]string{"io.quay", keySuffix}, ".")
 }
 
 type WellknownClient struct {

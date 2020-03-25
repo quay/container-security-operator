@@ -120,7 +120,6 @@ func newFakeLabeller(ctx context.Context, c *testClient, config *Config) *Labell
 		resyncThreshold:   config.ResyncThreshold,
 		wellKnownEndpoint: config.WellknownEndpoint,
 		prometheus:        prometheus.NewServer(config.PrometheusAddr),
-		vulnerabilities:   NewLockableVulnerabilites(),
 
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "fakeLabeller"),
 	}
@@ -229,7 +228,7 @@ func TestSkipNonRunningPod(t *testing.T) {
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
 	for _, pod := range pods {
-		err := fakeLabeller.SecurityLabelPod(pod.Namespace + "/" + pod.Name)
+		err := fakeLabeller.Reconcile(pod.Namespace + "/" + pod.Name)
 		if assert.Error(t, err) {
 			if pod.Status.Phase == corev1.PodRunning {
 				assert.Equal(t, err, fmt.Errorf("Pod condition not ready"))
@@ -259,7 +258,7 @@ func TestNonVulnerablePod(t *testing.T) {
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
 	// Scan the pod
-	err := fakeLabeller.SecurityLabelPod(runningPod.Namespace + "/" + runningPod.Name)
+	err := fakeLabeller.Reconcile(runningPod.Namespace + "/" + runningPod.Name)
 	assert.NoError(t, err)
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
@@ -289,7 +288,7 @@ func TestVulnerablePodCreateImageManifestVuln(t *testing.T) {
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
 	// Scan the pod
-	err := fakeLabeller.SecurityLabelPod(runningPod.Namespace + "/" + runningPod.Name)
+	err := fakeLabeller.Reconcile(runningPod.Namespace + "/" + runningPod.Name)
 	assert.NoError(t, err)
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
@@ -319,7 +318,7 @@ func TestVulnerablePodUpdateImageManifestVuln(t *testing.T) {
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
 	// Scan the pod
-	err := fakeLabeller.SecurityLabelPod(runningPod1.Namespace + "/" + runningPod1.Name)
+	err := fakeLabeller.Reconcile(runningPod1.Namespace + "/" + runningPod1.Name)
 	assert.NoError(t, err)
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
@@ -332,7 +331,7 @@ func TestVulnerablePodUpdateImageManifestVuln(t *testing.T) {
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
 	// Scan the pod
-	err = fakeLabeller.SecurityLabelPod(runningPod2.Namespace + "/" + runningPod2.Name)
+	err = fakeLabeller.Reconcile(runningPod2.Namespace + "/" + runningPod2.Name)
 	assert.NoError(t, err)
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
@@ -364,7 +363,7 @@ func TestForcedResyncThreshold(t *testing.T) {
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
 	// Scan the pod
-	err := fakeLabeller.SecurityLabelPod(runningPod.Namespace + "/" + runningPod.Name)
+	err := fakeLabeller.Reconcile(runningPod.Namespace + "/" + runningPod.Name)
 	assert.NoError(t, err)
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
@@ -374,7 +373,7 @@ func TestForcedResyncThreshold(t *testing.T) {
 	initialTimestamp, _ := lastManfestUpdateTime(manifest)
 
 	// Resyncing a pod too early should have no effects
-	err = fakeLabeller.SecurityLabelPod(runningPod.Namespace + "/" + runningPod.Name)
+	err = fakeLabeller.Reconcile(runningPod.Namespace + "/" + runningPod.Name)
 	assert.NoError(t, err)
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
@@ -390,7 +389,7 @@ func TestForcedResyncThreshold(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Rescan the pod and check for new lastUpdate
-	err = fakeLabeller.SecurityLabelPod(runningPod.Namespace + "/" + runningPod.Name)
+	err = fakeLabeller.Reconcile(runningPod.Namespace + "/" + runningPod.Name)
 	assert.NoError(t, err)
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
@@ -419,7 +418,7 @@ func TestGarbageCollectManifest(t *testing.T) {
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
 	// Scan the pod
-	err := fakeLabeller.SecurityLabelPod(runningPod.Namespace + "/" + runningPod.Name)
+	err := fakeLabeller.Reconcile(runningPod.Namespace + "/" + runningPod.Name)
 	assert.NoError(t, err)
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
@@ -434,7 +433,7 @@ func TestGarbageCollectManifest(t *testing.T) {
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
 	// Delete event reconciliation
-	err = fakeLabeller.SecurityLabelPod(runningPod.Namespace + "/" + runningPod.Name)
+	err = fakeLabeller.Reconcile(runningPod.Namespace + "/" + runningPod.Name)
 	assert.NoError(t, err)
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 

@@ -131,7 +131,7 @@ func ParseImageID(imageID string) (*Image, error) {
 	// https://github.com/kubernetes/kubernetes/issues/46255
 	imageIDTokens := strings.SplitN(imageID, "://", 2)
 	if len(imageIDTokens) > 2 {
-		return nil, fmt.Errorf("Invalid imageID format")
+		return nil, fmt.Errorf("Invalid imageID format: %s", imageID)
 	}
 	if len(imageIDTokens) == 2 {
 		if imageIDTokens[0] != "docker-pullable" {
@@ -144,9 +144,13 @@ func ParseImageID(imageID string) (*Image, error) {
 
 	i := strings.IndexRune(img, '/')
 	if i == -1 {
+		repoDigest := strings.SplitN(img, "@", 2)
+		if len(repoDigest) != 2 {
+			return nil, fmt.Errorf("Invalid imageID format: %s", imageID)
+		}
+
 		// Dockerhub top-level namespace
 		// Format: {repo}@{digest}
-		repoDigest := strings.SplitN(img, "@", 2)
 		host = dockerhub
 		namespace = dockerhubNamespace
 		repository = repoDigest[0]
@@ -156,6 +160,10 @@ func ParseImageID(imageID string) (*Image, error) {
 		// Format: {namespace}/{repo}@{digest}
 		namespaceRepoDigest := strings.Split(img, "/")
 		repoDigest := strings.SplitN(namespaceRepoDigest[1], "@", 2)
+		if len(repoDigest) != 2 {
+			return nil, fmt.Errorf("Invalid imageID format: %s", imageID)
+		}
+
 		host = dockerhub
 		namespace = namespaceRepoDigest[0]
 		repository = repoDigest[0]
@@ -163,13 +171,26 @@ func ParseImageID(imageID string) (*Image, error) {
 	} else {
 		// Full registry path
 		// Format: {host}/{namespace}/{repo}@{digest}
-		host = strings.SplitN(img, "/", 2)[0]
-		imagePath := strings.SplitN(img, "/", 2)[1]
-		splitImagePath := strings.Split(imagePath, "/")
+		hostRepopath := strings.SplitN(img, "/", 2)
+		if len(hostRepopath) != 2 {
+			return nil, fmt.Errorf("Invalid imageID format: %s", imageID)
+		}
 
-		imageDigest := splitImagePath[len(splitImagePath)-1]
-		repository = strings.Split(imageDigest, "@")[0]
-		digest = strings.Split(imageDigest, "@")[1]
+		host = hostRepopath[0]
+		imagePath := hostRepopath[1]
+		splitImagePath := strings.Split(imagePath, "/")
+		if len(splitImagePath) <= 1 {
+			return nil, fmt.Errorf("Invalid imageID format: %s", imageID)
+		}
+
+		repoAndDigest := splitImagePath[len(splitImagePath)-1]
+		splitRepoDigest := strings.Split(repoAndDigest, "@")
+		if len(splitRepoDigest) != 2 {
+			return nil, fmt.Errorf("Invalid imageID format: %s", imageID)
+		}
+
+		repository = splitRepoDigest[0]
+		digest = splitRepoDigest[1]
 		namespace = strings.Join(splitImagePath[:len(splitImagePath)-1], "/")
 	}
 
@@ -188,7 +209,7 @@ func ParseImageID(imageID string) (*Image, error) {
 			"validRepository": validRepository,
 			"validDigest":     validDigest,
 		}).Error("Invalid imageID format")
-		return nil, fmt.Errorf("Invalid imageID format")
+		return nil, fmt.Errorf("Invalid imageID format: %s", imageID)
 	}
 
 	image := &Image{

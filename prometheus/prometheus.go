@@ -105,5 +105,14 @@ func ObserveSecscanRequestDuration(host string) func() {
 
 func init() {
 	prometheus.MustRegister(PromVulnCount)
+	prometheus.MustRegister(PromVulnerableImages)
+	prometheus.MustRegister(PromLabellerErrorsTotal)
+	prometheus.MustRegister(PromPodEventsTotal)
+	prometheus.MustRegister(PromImageManifestVulnEventsTotal)
+	prometheus.MustRegister(PromQueueSize)
+	prometheus.MustRegister(PromSecscanRequestsTotal)
+	prometheus.MustRegister(PromSecscanRequestsDurationSeconds)
+	prometheus.MustRegister(PromReconciliationDurationSeconds)
+
 	log.Info("Registered prometheus metrics")
 }

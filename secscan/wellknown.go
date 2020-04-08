@@ -27,7 +27,7 @@ type AppCapabilities struct {
 	Capabilities map[string]Template `json:"capabilities"`
 }
 
-type Template map[string]string
+type Template map[string]interface{}
 
 // Generate the template key from the given host and key suffix
 // e.g. io.quay.manifest-security
@@ -85,7 +85,7 @@ func NewWellknownClient(host, wellKnownEndpoint string) (*WellknownClient, error
 func (wc *WellknownClient) ViewImageTemplate() (string, error) {
 	key := appCapabilityKey(wc.host, viewImageKeySuffix)
 	viewImage := wc.appCapabilities.Capabilities[key]
-	urlTemplate := viewImage[urlTemplateKey]
+	urlTemplate := viewImage[urlTemplateKey].(string)
 	if len(urlTemplate) == 0 {
 		return urlTemplate, fmt.Errorf("No view image capabilities")
 	}
@@ -95,7 +95,7 @@ func (wc *WellknownClient) ViewImageTemplate() (string, error) {
 func (wc *WellknownClient) ManifestSecurityTemplate() (string, error) {
 	key := appCapabilityKey(wc.host, manifestSecurityKeySuffix)
 	manifestSecurity := wc.appCapabilities.Capabilities[key]
-	restApiTemplate := manifestSecurity[restApiTemplateKey]
+	restApiTemplate := manifestSecurity[restApiTemplateKey].(string)
 	if len(restApiTemplate) == 0 {
 		return restApiTemplate, fmt.Errorf("No manifest security capabilities")
 	}
@@ -105,7 +105,7 @@ func (wc *WellknownClient) ManifestSecurityTemplate() (string, error) {
 func (wc *WellknownClient) ImageSecurityTemplate() (string, error) {
 	key := appCapabilityKey(wc.host, imageSecurityKeySuffix)
 	imageSecurity := wc.appCapabilities.Capabilities[key]
-	restApiTemplate := imageSecurity[restApiTemplateKey]
+	restApiTemplate := imageSecurity[restApiTemplateKey].(string)
 	if len(restApiTemplate) == 0 {
 		return restApiTemplate, fmt.Errorf("No image security capabilities")
 	}

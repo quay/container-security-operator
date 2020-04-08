@@ -2,9 +2,14 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"flag"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -45,7 +50,10 @@ func main() {
 	labelPrefix := flag.String("labelPrefix", "secscan", "CR label prefix.")
 	wellknownEndpoint := flag.String("wellknownEndpoint", ".well-known/app-capabilities", "Wellknown endpoint")
 
-	flagKubeConfigPath := flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+	insecure := flag.Bool("insecure", false, "Accept/Ignore all server SSL certificates")
+	extraCerts := flag.String("extraCerts", "", "Absolute path to directory containing extra SSL certificates")
+
+	flagKubeConfigPath := flag.String("kubeconfig", "", "Absolute path to the kubeconfig file")
 	flag.Parse()
 
 	// Load labeller config from file OR command line args
@@ -85,17 +93,52 @@ func main() {
 
 	// Create new Labeller instance
 	logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
+
+	_ = handleCerts(*insecure, *extraCerts)
+	if *insecure {
+		logger.Log("msg", "warning: skipping TLS verification for container registries")
+	}
+
 	l, err := labeller.New(cfg, *flagKubeConfigPath, logger)
 	if err != nil {
 		panic(err)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-
-	// Start Labeller
 	l.Run(ctx.Done())
 
-	// Wait for interrupt
 	waitForSignals(syscall.SIGINT, syscall.SIGTERM)
 	cancel()
+}
+
+func handleCerts(insecure bool, extraCerts string) error {
+	rootCAs, _ := x509.SystemCertPool()
+	if rootCAs == nil {
+		rootCAs = x509.NewCertPool()
+	}
+
+	if extraCerts == "" {
+		return nil
+	}
+
+	err := filepath.Walk(extraCerts, func(path string, info os.FileInfo, fileErr error) error {
+		if info.IsDir() {
+			return nil
+		}
+		certs, err := ioutil.ReadFile(path)
+
+		if err != nil {
+			return nil
+		}
+		rootCAs.AppendCertsFromPEM(certs)
+
+		return nil
+	})
+
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{
+		InsecureSkipVerify: insecure,
+		RootCAs:            rootCAs,
+	}
+
+	return err
 }

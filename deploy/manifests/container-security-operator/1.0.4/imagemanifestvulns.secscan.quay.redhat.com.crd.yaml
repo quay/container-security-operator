@@ -4,6 +4,7 @@ metadata:
   name: imagemanifestvulns.secscan.quay.redhat.com
 spec:
   group: secscan.quay.redhat.com
+  version: v1alpha1
   versions:
     - name: v1alpha1
       served: true

@@ -5,7 +5,7 @@ metadata:
     capabilities: Full Lifecycle
     categories: Security
     containerImage: quay.io/quay/container-security-operator@sha256:15a4b50d847512b5f404ec1cf72c30c98e073a7f26f1588213bd2e8b6331f016
-    createdAt: 2019-11-16 01:03:00
+    createdAt: 2020-03-10 01:03:00
     description: Identify image vulnerabilities in Kubernetes pods
     repository: https://github.com/quay/container-security-operator
     tectonic-visibility: ocs

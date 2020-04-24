@@ -1,0 +1,137 @@
+apiVersion: operators.coreos.com/{{ k8s_api_version }}
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    capabilities: Full Lifecycle
+    categories: Security
+    containerImage: {{ container_image }}
+    createdAt: {{ get_current_datetime() }}
+    description: Identify image vulnerabilities in Kubernetes pods
+    repository: https://github.com/quay/container-security-operator
+    tectonic-visibility: ocs
+  name: container-security-operator.{{ version }}
+  namespace: placeholder
+spec:
+  customresourcedefinitions:
+    owned:
+    - description: Represents a set of vulnerabilities in an image manifest.
+      displayName: Image Manifest Vulnerability
+      kind: ImageManifestVuln
+      name: imagemanifestvulns.secscan.quay.redhat.com
+      version: {{ k8s_api_version }}
+  description: "The Container Security Operator (CSO) brings Quay and Clair metadata to Kubernetes / OpenShift.\
+    \ Starting with vulnerability information the scope will get expanded over time. If it runs on OpenShift,\
+    \ the corresponding vulnerability information is shown inside the OCP Console. The Container Security Operator\
+    \ enables cluster administrators to monitor known container\
+    \ image vulnerabilities in pods running on their Kubernetes cluster. The controller sets up a watch\
+    \ on pods in the specified namespace(s) and queries the container registry for vulnerability\
+    \ information. If the container registry supports image scanning,\
+    \ such as [Quay](https://github.com/quay/quay) with [Clair](https://github.com/quay/clair),\
+    \ then the Operator will expose any vulnerabilities found via the Kubernetes API in an\
+    \ `ImageManifestVuln` object.  This Operator requires no additional configuration after deployment,\
+    \ and will begin watching pods and populating `ImageManifestVulns` immediately once installed."
+  displayName: Container Security
+  install:
+    spec:
+      deployments:
+      - name: container-security-operator
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              name: container-security-operator-alm-owned
+          template:
+            metadata:
+              labels:
+                name: container-security-operator-alm-owned
+              name: container-security-operator-alm-owned
+            spec:
+              containers:
+              - command:
+                - /bin/security-labeller
+                - '--namespaces=$(WATCH_NAMESPACE)'
+                - '--extraCerts=/extra-certs'
+                env:
+                - name: MY_POD_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.namespace
+                - name: MY_POD_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: WATCH_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.annotations['olm.targetNamespaces']
+                image: {{ container_image }}
+                volumeMounts:
+                  - name: extra-certs
+                    readOnly: true
+                    mountPath: /extra-certs
+                name: container-security-operator
+              serviceAccountName: container-security-operator
+              volumes:
+                - name: extra-certs
+                  secret:
+                    optional: true
+                    secretName: container-security-operator-extra-certs
+      permissions:
+      - rules:
+        - apiGroups:
+          - secscan.quay.redhat.com
+          resources:
+          - imagemanifestvulns
+          - imagemanifestvulns/status
+          verbs:
+          - '*'
+        - apiGroups:
+          - ''
+          resources:
+          - pods
+          - events
+          verbs:
+          - '*'
+        - apiGroups:
+          - ''
+          resources:
+          - secrets
+          verbs:
+          - get
+        serviceAccountName: container-security-operator
+    strategy: deployment
+  installModes:
+  - supported: true
+    type: OwnNamespace
+  - supported: true
+    type: SingleNamespace
+  - supported: true
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - open source
+  - containers
+  - security
+  labels:
+    alm-owner-container-security-operator: container-security-operator
+    operated-by: container-security-operator
+  icon:
+  - base64data: {{ logo }}
+    mediatype: image/png
+  maturity: alpha
+  links:
+  - name: Source Code
+    url: https://github.com/quay/container-security-operator
+  maintainers:
+  - email: quay-devel@redhat.com
+    name: Quay Engineering Team
+  provider:
+    name: Red Hat
+  selector:
+    matchLabels:
+      alm-owner-container-security-operator: container-security-operator
+      operated-by: container-security-operator
+  version: {{ version | normalize_version }}
+  {% if previous_version %}replaces: container-security-operator.{{ previous_version }}
+  {% endif %}

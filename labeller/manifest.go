@@ -279,6 +279,10 @@ func garbageCollectManifests(podclient corev1.PodInterface, manifestclient secsc
 	}
 
 	for _, manifest := range manifestList.Items {
+		if _, ok := manifest.GetAnnotations()[skipGCAnnotation]; ok {
+			return nil
+		}
+
 		var (
 			updated         bool
 			updatedManifest *secscanv1alpha1.ImageManifestVuln

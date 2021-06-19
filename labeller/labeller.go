@@ -3,6 +3,7 @@ package labeller
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -36,6 +37,8 @@ var (
 	CriticalLabel   = "Critical"
 	Defcon1Label    = "Defcon1"
 )
+
+const skipGCAnnotation = "imagemanifestvuln.skip-gc"
 
 type Labeller struct {
 	kclient           kubernetes.Interface
@@ -251,6 +254,8 @@ func (l *Labeller) handleAddImageManifestVuln(obj interface{}) {
 		level.Debug(l.logger).Log("msg", "ImageManifestVuln added", "key", key)
 		prometheus.PromImageManifestVulnEventsTotal.WithLabelValues("add", imgmanifestvuln.Namespace).Inc()
 	}
+
+	l.handleNoGC(imgmanifestvuln, &secscanv1alpha1.ImageManifestVuln{Spec: secscanv1alpha1.ImageManifestVulnSpec{Image: "none"}})
 }
 
 func (l *Labeller) handleDeleteImageManifestVuln(obj interface{}) {
@@ -273,6 +278,8 @@ func (l *Labeller) handleUpdateImageManifestVuln(oldObj, newObj interface{}) {
 		level.Debug(l.logger).Log("msg", "ImageManifestVuln updated", "key", key)
 		prometheus.PromImageManifestVulnEventsTotal.WithLabelValues("update", imgmanifestvuln.Namespace).Inc()
 	}
+
+	l.handleNoGC(imgmanifestvuln, oldObj.(*secscanv1alpha1.ImageManifestVuln))
 }
 
 func (l *Labeller) waitForCacheSync(stopc <-chan struct{}) error {
@@ -505,4 +512,13 @@ func (l *Labeller) podInNamespaces(pod *corev1.Pod) bool {
 		}
 	}
 	return false
+}
+
+func (l *Labeller) handleNoGC(obj, oldObj *secscanv1alpha1.ImageManifestVuln) {
+	if _, ok := obj.GetAnnotations()[skipGCAnnotation]; ok && !reflect.DeepEqual(obj.Spec, oldObj.Spec) {
+		_, err := l.sclient.SecscanV1alpha1().ImageManifestVulns(obj.GetNamespace()).UpdateStatus(updateImageManifestVulnLastUpdate(obj))
+		if err != nil {
+			level.Error(l.logger).Log("msg", "Error updating noop ImageManifestVuln", "err", err)
+		}
+	}
 }

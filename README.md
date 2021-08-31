@@ -40,7 +40,7 @@ This Operator should be deployed using the [Operator Lifecycle Manager (OLM)](ht
 
 ### Kubernetes
 
-This Operator is published upstream on [operatorhub.io](https://operatorhub.io/operator/container-security-operator).
+This Operator is published upstream on [operatorhub.io](https://operatorhub.io/operator/project-quay-container-security-operator).
 
 ### OpenShift
 

@@ -1,16 +1,16 @@
 # Container Security Operator 
 
-The Container Security Operator (CSO) brings Quay and Clair metadata to Kubernetes / OpenShift. Starting with vulnerability information the scope will get expanded over time. If it runs on OpenShift, the corresponding vulnerability information can be visualized inside the OCP Console. The Container Security Operator enables cluster administrators to monitor known container image vulnerabilites in pods running on their Kubernetes cluster. The controller sets up a watch on pods in the specified namespace(s) and queries the container registry for vulnerability information. If the container registry supports image scanning, such as [Quay](https://github.com/quay/quay) with [Clair](https://github.com/quay/clair), then the Operator will expose any vulnerabilities found via the Kubernetes API in an `ImageManifestVuln` object.  This Operator requires no additional configuration after deployment, and will begin watching pods and populating `ImageManifestVulns` immediately once installed.
+The Container Security Operator (CSO) brings Quay and Clair metadata to Kubernetes / OpenShift. Starting with vulnerability information the scope will get expanded over time. If it runs on OpenShift, the corresponding vulnerability information can be visualized inside the OCP Console. The Container Security Operator enables cluster administrators to monitor known container image vulnerabilities in pods running on their Kubernetes cluster. The controller sets up a watch on pods in the specified namespace(s) and queries the container registry for vulnerability information. If the container registry supports image scanning, such as [Quay](https://github.com/quay/quay) with [Clair](https://github.com/quay/clair), then the Operator will expose any vulnerabilities found via the Kubernetes API in an `ImageManifestVuln` object.  This Operator requires no additional configuration after deployment, and will begin watching pods and populating `ImageManifestVulns` immediately once installed.
 
 ## ImageManifestVuln
 The security information of scanned images are stored in `ImageManifestVulns` on an image manifest basis, and are named by the image's manifest digest.
 
 ### Spec
-The spec provides information about the features and its associated vulnarabilities.
+The spec provides information about the features and its associated vulnerabilities.
 The spec should be immutable relative to the cluster. When a new vulnerability is added to a feature, the operator will update the spec after the resync threshold.
 
 ### Status
-The status provides information about the affected Pods/Containers. As pod are added or removed
+The status provides information about the affected Pods/Containers. As pods are added or removed
 from the cluster, their references are added to the `affectedPods` field of the status block.
 The status also provide various statistics about the manifest. e.g lastUpdate, highestSeverity, ...
 

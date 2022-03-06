@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 )
 
 func generateContainerStatus(name, image, imageID string) v1.ContainerStatus {
@@ -84,6 +84,14 @@ var imageTable = []struct {
 		"",
 		"",
 		fmt.Errorf("Invalid imageID format: %s", "sha256:24c6258b99cd427d0c3003e2878159de269f96c4ffbdeceaf9373ea3a31866b3"),
+	},
+	{
+		"docker-pullable://my.registry.in.the.wild:9999/library/image@sha256:deadb33f99cd427d0c3003e2878159de269f96c4ffbdeceaf9373ea3a31866b3",
+		"my.registry.in.the.wild:9999",
+		"library",
+		"image",
+		"sha256:deadb33f99cd427d0c3003e2878159de269f96c4ffbdeceaf9373ea3a31866b3",
+		nil,
 	},
 }
 

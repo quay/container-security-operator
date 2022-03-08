@@ -9,6 +9,20 @@ metadata:
     description: Identify image vulnerabilities in Kubernetes pods
     repository: https://github.com/quay/container-security-operator
     tectonic-visibility: ocs
+    alm-examples: |- 
+      [
+        {
+          "apiVersion": "secscan.quay.redhat.com/v1alpha1",
+          "kind": "ImageManifestVuln",
+          "metadata": {
+            "name": "example",
+            "annotations": {
+              "imagemanifestvuln.skip-gc": "true"
+            }
+          },
+          "spec": {}
+        }
+      ]
   name: container-security-operator.v1.0.1
   namespace: placeholder
 spec:

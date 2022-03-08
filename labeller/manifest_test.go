@@ -22,7 +22,7 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/client-go/kubernetes/typed/core/v1"
+	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 func randString(n int) string {
@@ -394,6 +394,31 @@ func TestGarbageCollectManifestDeletion(t *testing.T) {
 	assert.Len(t, manifests, 1)
 	assert.Equal(t, manifests[0].Name, manifestNameFromImageID(imageIDs[0]))
 	assert.Equal(t, sortedPodKeysFromPods(testPods), sortedAffectedPodsKeys(manifests[0]))
+}
+
+func TestGarbageCollectManifestNoop(t *testing.T) {
+	ns := generateNamespaceForTest(t)
+
+	c := newTestClient()
+
+	noopManifest := &secscanv1alpha1.ImageManifestVuln{}
+	noopManifest.SetLabels(map[string]string{"imagemanifestvuln.example": "true"})
+	if _, err := c.imageManifestVulnsClient(ns).Create(noopManifest); err != nil {
+		t.Fatal(err)
+	}
+
+	// Garbage collecting manifest with noop label should not delete anything
+	err := garbageCollectManifests(c.podsClient(ns), c.imageManifestVulnsClient(ns))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that the number of manifests if the same
+	manifestList, err := c.imageManifestVulnsClient(ns).List(metav1.ListOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Len(t, manifestList.Items, 1)
 }
 
 func TestGarbageCollectManifestDanglingPods(t *testing.T) {

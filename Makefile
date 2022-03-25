@@ -13,11 +13,11 @@ run: build
 
 .PHONY: installcrds
 installcrds:
-	kubectl create -f deploy/imagemanifestvuln.crd.yaml
+	kubectl create -f bundle/imagemanifestvuln.crd.yaml
 
 .PHONY: devenv
 devenv: installcrds
-	kubectl apply -f deploy/examples/
+	kubectl apply -f bundle/examples/
 
 .PHONY: vendor
 vendor:

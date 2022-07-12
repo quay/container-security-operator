@@ -55,12 +55,22 @@ func ParsePullSecret(ctx context.Context, secretClient corev1.SecretInterface, n
 		return nil, err
 	}
 
-	secretData := secret.Data[strings.ReplaceAll(string(secret.Type), "kubernetes.io/", ".")]
-
-	var config *DockerConfigJson
-	if err = json.Unmarshal(secretData, &config); err != nil {
-		return nil, err
+	config := new(DockerConfigJson)
+	switch secret.Type {
+	case v1.SecretTypeDockercfg:
+		data := secret.Data[v1.DockerConfigKey]
+		if err := json.Unmarshal(data, &config.Auths); err != nil {
+			return nil, err
+		}
+	case v1.SecretTypeDockerConfigJson:
+		data := secret.Data[v1.DockerConfigJsonKey]
+		if err := json.Unmarshal(data, config); err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("unknown pull secret type: %s", secret.Type)
 	}
+
 	return config, nil
 }
 

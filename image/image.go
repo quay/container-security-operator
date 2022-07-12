@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 
@@ -42,19 +43,33 @@ type DockerAuth struct {
 	Auth     string `json:"auth,omitempty"`
 }
 
+// ParsePullSecret parses a kubernetes secret containing image pull credentials. Return either a
+// valid parsed secret or an error. If the secret does not exist and empty DockerConfigJson ref
+// is returned.
+func ParsePullSecret(ctx context.Context, secretClient corev1.SecretInterface, name string) (*DockerConfigJson, error) {
+	secret, err := secretClient.Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return &DockerConfigJson{Auths: map[string]DockerAuth{}}, nil
+		}
+		return nil, err
+	}
+
+	secretData := secret.Data[strings.ReplaceAll(string(secret.Type), "kubernetes.io/", ".")]
+
+	var config *DockerConfigJson
+	if err = json.Unmarshal(secretData, &config); err != nil {
+		return nil, err
+	}
+	return config, nil
+}
+
 func ParsePullSecrets(ctx context.Context, secretClient corev1.SecretInterface, pullSecretRefs []v1.LocalObjectReference) (*DockerConfigJson, error) {
 	dockerJsonConfig := &DockerConfigJson{Auths: map[string]DockerAuth{}}
 	for _, secretRef := range pullSecretRefs {
-		secret, err := secretClient.Get(ctx, secretRef.Name, metav1.GetOptions{})
+		config, err := ParsePullSecret(ctx, secretClient, secretRef.Name)
 		if err != nil {
-			return nil, fmt.Errorf("Unable to get pull secret: %s", secretRef.Name)
-		}
-
-		secretData := secret.Data[strings.ReplaceAll(string(secret.Type), "kubernetes.io/", ".")]
-
-		var config *DockerConfigJson
-		if err = json.Unmarshal(secretData, &config); err != nil {
-			return nil, fmt.Errorf("Failed to parse pull secret: %s", secretRef.Name)
+			return nil, fmt.Errorf("Unable to process pull secret %q: %s", secretRef.Name, err)
 		}
 
 		for host, auth := range config.Auths {

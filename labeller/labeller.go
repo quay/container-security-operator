@@ -385,6 +385,13 @@ func (l *Labeller) Reconcile(ctx context.Context, key string) error {
 		return err
 	}
 
+	defaultSecretClient := l.kclient.CoreV1().Secrets("openshift-config")
+	clusterAuths, err := image.ParsePullSecret(defaultSecretClient, "pull-secret")
+	if err != nil {
+		level.Error(l.logger).Log("msg", "fail to process global pull secret", "err", err)
+		clusterAuths = &image.DockerConfigJson{Auths: map[string]image.DockerAuth{}}
+	}
+
 	// Add pod containers' images to scan
 	imagesToScan := make(map[string]*image.Image)
 	for _, containerStatus := range pod.Status.ContainerStatuses {
@@ -393,9 +400,13 @@ func (l *Labeller) Reconcile(ctx context.Context, key string) error {
 			level.Error(l.logger).Log("msg", "Error parsing imageID", "imageID", containerStatus.ImageID)
 			continue
 		}
+
 		if val, ok := dockerJsonConfig.Auths[image.Host]; ok {
 			image.Auth = val.Auth
+		} else if val, ok := clusterAuths.Auths[image.Host]; ok {
+			image.Auth = val.Auth
 		}
+
 		image.ContainerName = containerStatus.Name
 		imagesToScan[image.Digest] = image
 	}

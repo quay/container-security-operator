@@ -72,10 +72,14 @@ spec:
                 name: container-security-operator
               serviceAccountName: container-security-operator
               volumes:
-                - name: extra-certs
-                  secret:
-                    optional: true
-                    secretName: container-security-operator-extra-certs
+              - name: extra-certs
+                projected:
+                  sources:
+                  - configMap:
+                      name: cso-cluster-trusted-ca
+                  - secret:
+                      optional: true
+                      name: container-security-operator-extra-certs
       permissions:
       - rules:
         - apiGroups:

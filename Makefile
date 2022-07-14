@@ -91,3 +91,37 @@ CODEGEN_IMAGE = container-security-operator:codegen
 .PHONY: BUILD_CODEGEN_IMAGE
 BUILD_CODEGEN_IMAGE:
 	docker build -f Dockerfile.codegen -t $(CODEGEN_IMAGE) .
+
+
+# =======================
+# CSV Manifest generation
+# =======================
+MANIFESTGEN_IMAGE = container-security-operator:manifestgen
+
+MANIFESTGEN_WORKDIR ?= scripts
+MANIFESTGEN_OUTPUT_DIR ?= deploy
+MANIFESTGEN_VERSION ?= master
+MANIFESTGEN_OPT_FLAGS ?= --upstream --skip-pull --yaml
+
+OPERATOR_IMAGE ?= quay.io/quay/container-security-operator
+OPERATOR_IMAGE_REF ?= $(shell \
+	docker pull $(OPERATOR_IMAGE):$(MANIFESTGEN_VERSION) > /dev/null && \
+	docker inspect $(OPERATOR_IMAGE):$(MANIFESTGEN_VERSION) | jq '.[0].RepoDigests[] | select(. | startswith("$(OPERATOR_IMAGE)"))' \
+)
+
+.PHONY: BUILD_MANIFESTGEN_IMAGE
+BUILD_MANIFEST_GEN_IMAGE:
+	docker build -t $(MANIFESTGEN_IMAGE) scripts
+
+.PHONY: manifestgen-container
+manifestgen-container: BUILD_MANIFEST_GEN_IMAGE
+	docker run --rm --name manifestgen \
+	-v $(PWD)/$(MANIFESTGEN_WORKDIR):/workspace/$(MANIFESTGEN_WORKDIR) \
+	-v $(PWD)/$(MANIFESTGEN_OUTPUT_DIR):/workspace/$(MANIFESTGEN_OUTPUT_DIR) \
+	$(MANIFESTGEN_IMAGE) \
+	python $(MANIFESTGEN_WORKDIR)/generate_csv.py $(MANIFESTGEN_VERSION) $(MANIFESTGEN_PREVIOUS_VERSION) \
+	--workdir $(MANIFESTGEN_WORKDIR) --output-dir $(MANIFESTGEN_OUTPUT_DIR) \
+	--image $(OPERATOR_IMAGE_REF)	$(MANIFESTGEN_OPT_FLAGS)
+
+# Example:
+# $ OPERATOR_IMAGE_REF=quay.io/quay/container-security-operator:v1.0.0 MANIFESTGEN_OUTPUT_DIR=testingscript MANIFESTGEN_VERSION=v3.3.0 make manifestgen-container

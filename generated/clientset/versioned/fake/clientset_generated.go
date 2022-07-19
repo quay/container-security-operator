@@ -19,9 +19,9 @@ limitations under the License.
 package fake
 
 import (
-	clientset "github.com/quay/container-security-operator/generated/versioned"
-	secscanv1alpha1 "github.com/quay/container-security-operator/generated/versioned/typed/secscan/v1alpha1"
-	fakesecscanv1alpha1 "github.com/quay/container-security-operator/generated/versioned/typed/secscan/v1alpha1/fake"
+	clientset "github.com/quay/container-security-operator/generated/clientset/versioned"
+	secscanv1alpha1 "github.com/quay/container-security-operator/generated/clientset/versioned/typed/secscan/v1alpha1"
+	fakesecscanv1alpha1 "github.com/quay/container-security-operator/generated/clientset/versioned/typed/secscan/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -74,7 +74,10 @@ func (c *Clientset) Tracker() testing.ObjectTracker {
 	return c.tracker
 }
 
-var _ clientset.Interface = &Clientset{}
+var (
+	_ clientset.Interface = &Clientset{}
+	_ testing.FakeClient  = &Clientset{}
+)
 
 // SecscanV1alpha1 retrieves the SecscanV1alpha1Client
 func (c *Clientset) SecscanV1alpha1() secscanv1alpha1.SecscanV1alpha1Interface {

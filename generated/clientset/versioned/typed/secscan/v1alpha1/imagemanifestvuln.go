@@ -19,10 +19,11 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	"time"
 
 	v1alpha1 "github.com/quay/container-security-operator/apis/secscan/v1alpha1"
-	scheme "github.com/quay/container-security-operator/generated/versioned/scheme"
+	scheme "github.com/quay/container-security-operator/generated/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -37,15 +38,15 @@ type ImageManifestVulnsGetter interface {
 
 // ImageManifestVulnInterface has methods to work with ImageManifestVuln resources.
 type ImageManifestVulnInterface interface {
-	Create(*v1alpha1.ImageManifestVuln) (*v1alpha1.ImageManifestVuln, error)
-	Update(*v1alpha1.ImageManifestVuln) (*v1alpha1.ImageManifestVuln, error)
-	UpdateStatus(*v1alpha1.ImageManifestVuln) (*v1alpha1.ImageManifestVuln, error)
-	Delete(name string, options *v1.DeleteOptions) error
-	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
-	Get(name string, options v1.GetOptions) (*v1alpha1.ImageManifestVuln, error)
-	List(opts v1.ListOptions) (*v1alpha1.ImageManifestVulnList, error)
-	Watch(opts v1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.ImageManifestVuln, err error)
+	Create(ctx context.Context, imageManifestVuln *v1alpha1.ImageManifestVuln, opts v1.CreateOptions) (*v1alpha1.ImageManifestVuln, error)
+	Update(ctx context.Context, imageManifestVuln *v1alpha1.ImageManifestVuln, opts v1.UpdateOptions) (*v1alpha1.ImageManifestVuln, error)
+	UpdateStatus(ctx context.Context, imageManifestVuln *v1alpha1.ImageManifestVuln, opts v1.UpdateOptions) (*v1alpha1.ImageManifestVuln, error)
+	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
+	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.ImageManifestVuln, error)
+	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.ImageManifestVulnList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ImageManifestVuln, err error)
 	ImageManifestVulnExpansion
 }
 
@@ -64,20 +65,20 @@ func newImageManifestVulns(c *SecscanV1alpha1Client, namespace string) *imageMan
 }
 
 // Get takes name of the imageManifestVuln, and returns the corresponding imageManifestVuln object, and an error if there is any.
-func (c *imageManifestVulns) Get(name string, options v1.GetOptions) (result *v1alpha1.ImageManifestVuln, err error) {
+func (c *imageManifestVulns) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ImageManifestVuln, err error) {
 	result = &v1alpha1.ImageManifestVuln{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("imagemanifestvulns").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of ImageManifestVulns that match those selectors.
-func (c *imageManifestVulns) List(opts v1.ListOptions) (result *v1alpha1.ImageManifestVulnList, err error) {
+func (c *imageManifestVulns) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ImageManifestVulnList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -88,13 +89,13 @@ func (c *imageManifestVulns) List(opts v1.ListOptions) (result *v1alpha1.ImageMa
 		Resource("imagemanifestvulns").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested imageManifestVulns.
-func (c *imageManifestVulns) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *imageManifestVulns) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -105,87 +106,90 @@ func (c *imageManifestVulns) Watch(opts v1.ListOptions) (watch.Interface, error)
 		Resource("imagemanifestvulns").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(ctx)
 }
 
 // Create takes the representation of a imageManifestVuln and creates it.  Returns the server's representation of the imageManifestVuln, and an error, if there is any.
-func (c *imageManifestVulns) Create(imageManifestVuln *v1alpha1.ImageManifestVuln) (result *v1alpha1.ImageManifestVuln, err error) {
+func (c *imageManifestVulns) Create(ctx context.Context, imageManifestVuln *v1alpha1.ImageManifestVuln, opts v1.CreateOptions) (result *v1alpha1.ImageManifestVuln, err error) {
 	result = &v1alpha1.ImageManifestVuln{}
 	err = c.client.Post().
 		Namespace(c.ns).
 		Resource("imagemanifestvulns").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(imageManifestVuln).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Update takes the representation of a imageManifestVuln and updates it. Returns the server's representation of the imageManifestVuln, and an error, if there is any.
-func (c *imageManifestVulns) Update(imageManifestVuln *v1alpha1.ImageManifestVuln) (result *v1alpha1.ImageManifestVuln, err error) {
+func (c *imageManifestVulns) Update(ctx context.Context, imageManifestVuln *v1alpha1.ImageManifestVuln, opts v1.UpdateOptions) (result *v1alpha1.ImageManifestVuln, err error) {
 	result = &v1alpha1.ImageManifestVuln{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("imagemanifestvulns").
 		Name(imageManifestVuln.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(imageManifestVuln).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-
-func (c *imageManifestVulns) UpdateStatus(imageManifestVuln *v1alpha1.ImageManifestVuln) (result *v1alpha1.ImageManifestVuln, err error) {
+func (c *imageManifestVulns) UpdateStatus(ctx context.Context, imageManifestVuln *v1alpha1.ImageManifestVuln, opts v1.UpdateOptions) (result *v1alpha1.ImageManifestVuln, err error) {
 	result = &v1alpha1.ImageManifestVuln{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("imagemanifestvulns").
 		Name(imageManifestVuln.Name).
 		SubResource("status").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(imageManifestVuln).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Delete takes name of the imageManifestVuln and deletes it. Returns an error if one occurs.
-func (c *imageManifestVulns) Delete(name string, options *v1.DeleteOptions) error {
+func (c *imageManifestVulns) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("imagemanifestvulns").
 		Name(name).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *imageManifestVulns) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+func (c *imageManifestVulns) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	var timeout time.Duration
-	if listOptions.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	if listOpts.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("imagemanifestvulns").
-		VersionedParams(&listOptions, scheme.ParameterCodec).
+		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // Patch applies the patch and returns the patched imageManifestVuln.
-func (c *imageManifestVulns) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.ImageManifestVuln, err error) {
+func (c *imageManifestVulns) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ImageManifestVuln, err error) {
 	result = &v1alpha1.ImageManifestVuln{}
 	err = c.client.Patch(pt).
 		Namespace(c.ns).
 		Resource("imagemanifestvulns").
-		SubResource(subresources...).
 		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }

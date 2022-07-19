@@ -19,12 +19,13 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	time "time"
 
 	secscanv1alpha1 "github.com/quay/container-security-operator/apis/secscan/v1alpha1"
+	versioned "github.com/quay/container-security-operator/generated/clientset/versioned"
 	internalinterfaces "github.com/quay/container-security-operator/generated/informers/externalversions/internalinterfaces"
 	v1alpha1 "github.com/quay/container-security-operator/generated/listers/secscan/v1alpha1"
-	versioned "github.com/quay/container-security-operator/generated/versioned"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -61,13 +62,13 @@ func NewFilteredImageManifestVulnInformer(client versioned.Interface, namespace 
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.SecscanV1alpha1().ImageManifestVulns(namespace).List(options)
+				return client.SecscanV1alpha1().ImageManifestVulns(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.SecscanV1alpha1().ImageManifestVulns(namespace).Watch(options)
+				return client.SecscanV1alpha1().ImageManifestVulns(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&secscanv1alpha1.ImageManifestVuln{},

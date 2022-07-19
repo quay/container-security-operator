@@ -1,6 +1,7 @@
 package labeller
 
 import (
+	"context"
 	"math/rand"
 	"sort"
 	"strconv"
@@ -14,15 +15,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	secscanv1alpha1 "github.com/quay/container-security-operator/apis/secscan/v1alpha1"
-	secscanclient "github.com/quay/container-security-operator/generated/versioned"
-	fakesecscanclient "github.com/quay/container-security-operator/generated/versioned/fake"
-	secscanv1alpha1client "github.com/quay/container-security-operator/generated/versioned/typed/secscan/v1alpha1"
+	secscanclient "github.com/quay/container-security-operator/generated/clientset/versioned"
+	fakesecscanclient "github.com/quay/container-security-operator/generated/clientset/versioned/fake"
+	secscanv1alpha1client "github.com/quay/container-security-operator/generated/clientset/versioned/typed/secscan/v1alpha1"
 	"github.com/quay/container-security-operator/image"
 	"github.com/quay/container-security-operator/secscan/secscanfakes"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/client-go/kubernetes/typed/core/v1"
+	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 func randString(n int) string {
@@ -192,27 +193,33 @@ func (c *testClient) imageManifestVulnsClient(namespace string) secscanv1alpha1c
 }
 
 func (c *testClient) getPod(namespace, name string, getOptions metav1.GetOptions) (*corev1.Pod, error) {
-	return c.podsClient(namespace).Get(name, getOptions)
+	ctx := context.Background()
+	return c.podsClient(namespace).Get(ctx, name, getOptions)
 }
 
 func (c *testClient) getManifest(namespace, name string, getOptions metav1.GetOptions) (*secscanv1alpha1.ImageManifestVuln, error) {
-	return c.imageManifestVulnsClient(namespace).Get(name, getOptions)
+	ctx := context.Background()
+	return c.imageManifestVulnsClient(namespace).Get(ctx, name, getOptions)
 }
 
 func (c *testClient) updateManifestStatus(manifest *secscanv1alpha1.ImageManifestVuln) (*secscanv1alpha1.ImageManifestVuln, error) {
-	return c.imageManifestVulnsClient(manifest.ObjectMeta.Namespace).UpdateStatus(manifest)
+	ctx := context.Background()
+	return c.imageManifestVulnsClient(manifest.ObjectMeta.Namespace).UpdateStatus(ctx, manifest, metav1.UpdateOptions{})
 }
 
-func (c *testClient) deletePod(namespace, name string, deleteOptions *metav1.DeleteOptions) error {
-	return c.podsClient(namespace).Delete(name, deleteOptions)
+func (c *testClient) deletePod(namespace, name string, deleteOptions metav1.DeleteOptions) error {
+	ctx := context.Background()
+	return c.podsClient(namespace).Delete(ctx, name, deleteOptions)
 }
 
 func (c *testClient) updatePodStatus(pod *corev1.Pod) (*corev1.Pod, error) {
-	return c.podsClient(pod.ObjectMeta.Namespace).UpdateStatus(pod)
+	ctx := context.Background()
+	return c.podsClient(pod.ObjectMeta.Namespace).UpdateStatus(ctx, pod, metav1.UpdateOptions{})
 }
 
 func (c *testClient) createPod(pod *corev1.Pod) (*corev1.Pod, error) {
-	res, err := c.podsClient(pod.Namespace).Create(pod)
+	ctx := context.Background()
+	res, err := c.podsClient(pod.Namespace).Create(ctx, pod, metav1.CreateOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -220,12 +227,13 @@ func (c *testClient) createPod(pod *corev1.Pod) (*corev1.Pod, error) {
 }
 
 func (c *testClient) createManifest(namespace, name string, pods []*corev1.Pod) (*secscanv1alpha1.ImageManifestVuln, error) {
+	ctx := context.Background()
 	manifest, err := generateManifest(namespace, name, pods)
 	if err != nil {
 		return nil, err
 	}
 
-	res, err := c.imageManifestVulnsClient(namespace).Create(manifest)
+	res, err := c.imageManifestVulnsClient(namespace).Create(ctx, manifest, metav1.CreateOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -316,6 +324,7 @@ func TestRemoveDanglingPods(t *testing.T) {
 }
 
 func TestGarbageCollectManifestNoDeletion(t *testing.T) {
+	ctx := context.Background()
 	ns := generateNamespaceForTest(t)
 	testImageID1 := "quay.io/test/redis@sha256:94033a42da840b970fd9d2b04dae5fec56add2714ca674a758d030ce5acba27e"
 	testImageID2 := "quay.io/test/nginx@sha256:0d71ff22db29a08ac7399d1b35b0311c5b0cbe68d878993718275758811f652a"
@@ -330,13 +339,13 @@ func TestGarbageCollectManifestNoDeletion(t *testing.T) {
 	testPods2 := createTestPodsWithManifestForTest(t, ns, c, 4, []string{imageIDs[1]}, corev1.PodRunning)
 
 	// Garbage collecting manifest with affected pods should not delete anything
-	err := garbageCollectManifests(c.podsClient(ns), c.imageManifestVulnsClient(ns))
+	err := garbageCollectManifests(ctx, c.podsClient(ns), c.imageManifestVulnsClient(ns))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Check that the number of manifests if the same
-	manifestList, err := c.imageManifestVulnsClient(ns).List(metav1.ListOptions{})
+	manifestList, err := c.imageManifestVulnsClient(ns).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -358,6 +367,7 @@ func TestGarbageCollectManifestNoDeletion(t *testing.T) {
 }
 
 func TestGarbageCollectManifestDeletion(t *testing.T) {
+	ctx := context.Background()
 	ns := generateNamespaceForTest(t)
 	testImageID1 := "quay.io/test/redis@sha256:94033a42da840b970fd9d2b04dae5fec56add2714ca674a758d030ce5acba27e"
 	testImageID2 := "quay.io/test/nginx@sha256:0d71ff22db29a08ac7399d1b35b0311c5b0cbe68d878993718275758811f652a"
@@ -385,8 +395,8 @@ func TestGarbageCollectManifestDeletion(t *testing.T) {
 	assert.Empty(t, manifestToDelete.Status.AffectedPods)
 
 	// Garbage collect empty manifest
-	assert.NoError(t, garbageCollectManifests(c.podsClient(ns), c.imageManifestVulnsClient(ns)))
-	manifestList, err := c.imageManifestVulnsClient(ns).List(metav1.ListOptions{})
+	assert.NoError(t, garbageCollectManifests(ctx, c.podsClient(ns), c.imageManifestVulnsClient(ns)))
+	manifestList, err := c.imageManifestVulnsClient(ns).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -397,6 +407,7 @@ func TestGarbageCollectManifestDeletion(t *testing.T) {
 }
 
 func TestGarbageCollectManifestDanglingPods(t *testing.T) {
+	ctx := context.Background()
 	ns := generateNamespaceForTest(t)
 	testImageID := "quay.io/test/redis@sha256:94033a42da840b970fd9d2b04dae5fec56add2714ca674a758d030ce5acba27e"
 	imageIDs := []string{testImageID}
@@ -407,14 +418,14 @@ func TestGarbageCollectManifestDanglingPods(t *testing.T) {
 	testPods := createTestPodsWithManifestForTest(t, ns, c, 4, []string{imageIDs[0]}, corev1.PodRunning)
 
 	// Delete some pods
-	err := c.deletePod(testPods[0].Namespace, testPods[0].Name, &metav1.DeleteOptions{})
+	err := c.deletePod(testPods[0].Namespace, testPods[0].Name, metav1.DeleteOptions{})
 	assert.NoError(t, err)
-	err = c.deletePod(testPods[1].Namespace, testPods[1].Name, &metav1.DeleteOptions{})
+	err = c.deletePod(testPods[1].Namespace, testPods[1].Name, metav1.DeleteOptions{})
 	assert.NoError(t, err)
 	testPods = testPods[2:]
 
-	err = garbageCollectManifests(c.podsClient(ns), c.imageManifestVulnsClient(ns))
-	manifestList, err := c.imageManifestVulnsClient(ns).List(metav1.ListOptions{})
+	err = garbageCollectManifests(ctx, c.podsClient(ns), c.imageManifestVulnsClient(ns))
+	manifestList, err := c.imageManifestVulnsClient(ns).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}

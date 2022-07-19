@@ -18,6 +18,7 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/watch"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -129,9 +130,13 @@ func newFakeLabeller(ctx context.Context, c *testClient, config *Config) *Labell
 		func(namespace string) cache.ListerWatcher {
 			return &cache.ListWatch{
 				ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
-					return l.kclient.CoreV1().Pods(namespace).List(options)
+					ctx := context.Background()
+					return l.kclient.CoreV1().Pods(namespace).List(ctx, options)
 				},
-				WatchFunc: l.kclient.CoreV1().Pods(namespace).Watch,
+				WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+					ctx := context.Background()
+					return l.kclient.CoreV1().Pods(namespace).Watch(ctx, options)
+				},
 			}
 		},
 	)
@@ -152,9 +157,13 @@ func newFakeLabeller(ctx context.Context, c *testClient, config *Config) *Labell
 		func(namespace string) cache.ListerWatcher {
 			return &cache.ListWatch{
 				ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
-					return l.sclient.SecscanV1alpha1().ImageManifestVulns(namespace).List(options)
+					ctx := context.Background()
+					return l.sclient.SecscanV1alpha1().ImageManifestVulns(namespace).List(ctx, options)
 				},
-				WatchFunc: l.sclient.SecscanV1alpha1().ImageManifestVulns(namespace).Watch,
+				WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+					ctx := context.Background()
+					return l.sclient.SecscanV1alpha1().ImageManifestVulns(namespace).Watch(ctx, options)
+				},
 			}
 		},
 	)
@@ -171,7 +180,7 @@ func newFakeLabeller(ctx context.Context, c *testClient, config *Config) *Labell
 	})
 
 	for _, ns := range config.Namespaces {
-		_, err := l.kclient.CoreV1().Namespaces().Create(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}})
+		_, err := l.kclient.CoreV1().Namespaces().Create(context.Background(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}}, metav1.CreateOptions{})
 		if err != nil && !k8serrors.IsAlreadyExists(err) {
 			return nil
 		}
@@ -199,6 +208,8 @@ func createRunningPod(t *testing.T, c *testClient, ns, name string, imageIDs []s
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	time.Sleep(time.Second)
 	return runningPod
 }
 
@@ -228,7 +239,8 @@ func TestSkipNonRunningPod(t *testing.T) {
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
 	for _, pod := range pods {
-		err := fakeLabeller.Reconcile(pod.Namespace + "/" + pod.Name)
+		ctx := context.Background()
+		err := fakeLabeller.Reconcile(ctx, pod.Namespace+"/"+pod.Name)
 		if assert.Error(t, err) {
 			if pod.Status.Phase == corev1.PodRunning {
 				assert.Equal(t, err, fmt.Errorf("Pod condition not ready"))
@@ -258,7 +270,7 @@ func TestNonVulnerablePod(t *testing.T) {
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
 	// Scan the pod
-	err := fakeLabeller.Reconcile(runningPod.Namespace + "/" + runningPod.Name)
+	err := fakeLabeller.Reconcile(ctx, runningPod.Namespace+"/"+runningPod.Name)
 	assert.NoError(t, err)
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
@@ -288,7 +300,7 @@ func TestVulnerablePodCreateImageManifestVuln(t *testing.T) {
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
 	// Scan the pod
-	err := fakeLabeller.Reconcile(runningPod.Namespace + "/" + runningPod.Name)
+	err := fakeLabeller.Reconcile(ctx, runningPod.Namespace+"/"+runningPod.Name)
 	assert.NoError(t, err)
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
@@ -318,7 +330,7 @@ func TestVulnerablePodUpdateImageManifestVuln(t *testing.T) {
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
 	// Scan the pod
-	err := fakeLabeller.Reconcile(runningPod1.Namespace + "/" + runningPod1.Name)
+	err := fakeLabeller.Reconcile(ctx, runningPod1.Namespace+"/"+runningPod1.Name)
 	assert.NoError(t, err)
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
@@ -331,7 +343,7 @@ func TestVulnerablePodUpdateImageManifestVuln(t *testing.T) {
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
 	// Scan the pod
-	err = fakeLabeller.Reconcile(runningPod2.Namespace + "/" + runningPod2.Name)
+	err = fakeLabeller.Reconcile(ctx, runningPod2.Namespace+"/"+runningPod2.Name)
 	assert.NoError(t, err)
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
@@ -363,7 +375,7 @@ func TestForcedResyncThreshold(t *testing.T) {
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
 	// Scan the pod
-	err := fakeLabeller.Reconcile(runningPod.Namespace + "/" + runningPod.Name)
+	err := fakeLabeller.Reconcile(ctx, runningPod.Namespace+"/"+runningPod.Name)
 	assert.NoError(t, err)
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
@@ -373,7 +385,7 @@ func TestForcedResyncThreshold(t *testing.T) {
 	initialTimestamp, _ := lastManfestUpdateTime(manifest)
 
 	// Resyncing a pod too early should have no effects
-	err = fakeLabeller.Reconcile(runningPod.Namespace + "/" + runningPod.Name)
+	err = fakeLabeller.Reconcile(ctx, runningPod.Namespace+"/"+runningPod.Name)
 	assert.NoError(t, err)
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
@@ -389,7 +401,7 @@ func TestForcedResyncThreshold(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Rescan the pod and check for new lastUpdate
-	err = fakeLabeller.Reconcile(runningPod.Namespace + "/" + runningPod.Name)
+	err = fakeLabeller.Reconcile(ctx, runningPod.Namespace+"/"+runningPod.Name)
 	assert.NoError(t, err)
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
@@ -418,7 +430,7 @@ func TestGarbageCollectManifest(t *testing.T) {
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
 	// Scan the pod
-	err := fakeLabeller.Reconcile(runningPod.Namespace + "/" + runningPod.Name)
+	err := fakeLabeller.Reconcile(ctx, runningPod.Namespace+"/"+runningPod.Name)
 	assert.NoError(t, err)
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
@@ -429,11 +441,11 @@ func TestGarbageCollectManifest(t *testing.T) {
 	assert.True(t, ok)
 
 	// Delete the pod
-	assert.NoError(t, c.deletePod(runningPod.Namespace, runningPod.Name, &metav1.DeleteOptions{}))
+	assert.NoError(t, c.deletePod(runningPod.Namespace, runningPod.Name, metav1.DeleteOptions{}))
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 
 	// Delete event reconciliation
-	err = fakeLabeller.Reconcile(runningPod.Namespace + "/" + runningPod.Name)
+	err = fakeLabeller.Reconcile(ctx, runningPod.Namespace+"/"+runningPod.Name)
 	assert.NoError(t, err)
 	assert.NoError(t, fakeLabeller.waitForCacheSync(ctx.Done()))
 

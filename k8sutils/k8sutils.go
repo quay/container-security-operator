@@ -1,6 +1,7 @@
 package k8sutils
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
@@ -9,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/client-go/kubernetes"
@@ -88,22 +89,22 @@ func LoadClientset(cfg *rest.Config) (*kubernetes.Clientset, error) {
 	return clientset, nil
 }
 
-func ListPods(pclient clientv1.PodInterface) (*v1.PodList, error) {
-	pods, err := pclient.List(metav1.ListOptions{})
+func ListPods(ctx context.Context, pclient clientv1.PodInterface) (*v1.PodList, error) {
+	pods, err := pclient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 	return pods, nil
 }
 
-func UpdatePod(pclient clientv1.PodInterface, pod *v1.Pod) error {
-	p, err := pclient.Get(pod.Name, metav1.GetOptions{})
+func UpdatePod(ctx context.Context, pclient clientv1.PodInterface, pod *v1.Pod) error {
+	p, err := pclient.Get(ctx, pod.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
 
 	pod.ResourceVersion = p.ResourceVersion
-	_, err = pclient.Update(pod)
+	_, err = pclient.Update(ctx, pod, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}

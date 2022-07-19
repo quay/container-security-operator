@@ -1,6 +1,7 @@
 package image
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -41,10 +42,10 @@ type DockerAuth struct {
 	Auth     string `json:"auth,omitempty"`
 }
 
-func ParsePullSecrets(secretClient corev1.SecretInterface, pullSecretRefs []v1.LocalObjectReference) (*DockerConfigJson, error) {
+func ParsePullSecrets(ctx context.Context, secretClient corev1.SecretInterface, pullSecretRefs []v1.LocalObjectReference) (*DockerConfigJson, error) {
 	dockerJsonConfig := &DockerConfigJson{Auths: map[string]DockerAuth{}}
 	for _, secretRef := range pullSecretRefs {
-		secret, err := secretClient.Get(secretRef.Name, metav1.GetOptions{})
+		secret, err := secretClient.Get(ctx, secretRef.Name, metav1.GetOptions{})
 		if err != nil {
 			return nil, fmt.Errorf("Unable to get pull secret: %s", secretRef.Name)
 		}

@@ -1,6 +1,7 @@
 package labeller
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -9,7 +10,7 @@ import (
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	secscanv1alpha1 "github.com/quay/container-security-operator/apis/secscan/v1alpha1"
-	secscanv1alpha1client "github.com/quay/container-security-operator/generated/versioned/typed/secscan/v1alpha1"
+	secscanv1alpha1client "github.com/quay/container-security-operator/generated/clientset/versioned/typed/secscan/v1alpha1"
 	"github.com/quay/container-security-operator/secscan"
 )
 
@@ -239,21 +240,21 @@ func removeDanglingPods(validPodsKeys []string, manifest *secscanv1alpha1.ImageM
 	return manifest, changed
 }
 
-func removeAffectedPodFromManifests(apiclient secscanv1alpha1client.ImageManifestVulnInterface, key string) error {
+func removeAffectedPodFromManifests(ctx context.Context, apiclient secscanv1alpha1client.ImageManifestVulnInterface, key string) error {
 	listOptions := metav1.ListOptions{}
-	manifestList, err := apiclient.List(listOptions)
+	manifestList, err := apiclient.List(ctx, listOptions)
 	if err != nil {
 		return fmt.Errorf("Failed to list ImageManifestVulns: %w", err)
 	}
 
 	for _, manifest := range manifestList.Items {
 		if updatedManifest, changed := removeAffectedPod(key, manifest); changed {
-			updated, err := apiclient.Update(updatedManifest)
+			updated, err := apiclient.Update(ctx, updatedManifest, metav1.UpdateOptions{})
 			if err != nil {
 				return fmt.Errorf("Failed to update ImageManifestVuln: %w", err)
 			}
 			updated.Status = updatedManifest.Status
-			if _, err := apiclient.UpdateStatus(updated); err != nil {
+			if _, err := apiclient.UpdateStatus(ctx, updated, metav1.UpdateOptions{}); err != nil {
 				return fmt.Errorf("Failed to update ImageManifestVuln status: %w", err)
 			}
 		}
@@ -262,8 +263,8 @@ func removeAffectedPodFromManifests(apiclient secscanv1alpha1client.ImageManifes
 	return nil
 }
 
-func garbageCollectManifests(podclient corev1.PodInterface, manifestclient secscanv1alpha1client.ImageManifestVulnInterface) error {
-	podList, err := podclient.List(metav1.ListOptions{})
+func garbageCollectManifests(ctx context.Context, podclient corev1.PodInterface, manifestclient secscanv1alpha1client.ImageManifestVulnInterface) error {
+	podList, err := podclient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to list pods: %w", err)
 	}
@@ -273,7 +274,7 @@ func garbageCollectManifests(podclient corev1.PodInterface, manifestclient secsc
 		currentPodKeys = append(currentPodKeys, qualifiedName(pod.Namespace, pod.Name))
 	}
 
-	manifestList, err := manifestclient.List(metav1.ListOptions{})
+	manifestList, err := manifestclient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("Failed to list ImageManifestVulns: %w", err)
 	}
@@ -286,14 +287,14 @@ func garbageCollectManifests(podclient corev1.PodInterface, manifestclient secsc
 		updatedManifest, updated = removeDanglingPods(currentPodKeys, manifest)
 
 		if len(updatedManifest.Status.AffectedPods) == 0 {
-			if err := manifestclient.Delete(updatedManifest.Name, &metav1.DeleteOptions{}); err != nil {
+			if err := manifestclient.Delete(ctx, updatedManifest.Name, metav1.DeleteOptions{}); err != nil {
 				return fmt.Errorf("Failed to delete unreferenced ImageManifestVuln: %w", err)
 			}
 			continue
 		}
 
 		if updated {
-			if _, err := manifestclient.UpdateStatus(updatedManifest); err != nil {
+			if _, err := manifestclient.UpdateStatus(ctx, updatedManifest, metav1.UpdateOptions{}); err != nil {
 				return fmt.Errorf("Failed to update ImageManifestVuln: %w", err)
 			}
 		}
@@ -313,9 +314,9 @@ func contains(s []string, i string) bool {
 
 // Returns the number of images, and an aggregate count of the vulnerabilities in the images,
 // by severity.
-func aggVulnerabilityCount(manifestclient secscanv1alpha1client.ImageManifestVulnInterface) (*vulnerabilityCount, int, error) {
+func aggVulnerabilityCount(ctx context.Context, manifestclient secscanv1alpha1client.ImageManifestVulnInterface) (*vulnerabilityCount, int, error) {
 	vulnCount := &vulnerabilityCount{}
-	manifestList, err := manifestclient.List(metav1.ListOptions{})
+	manifestList, err := manifestclient.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, 0, fmt.Errorf("Failed to list ImageManifestVulns: %w", err)
 	}

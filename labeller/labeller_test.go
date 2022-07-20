@@ -114,6 +114,7 @@ func newFakeLabeller(ctx context.Context, c *testClient, config *Config) *Labell
 
 		kclient:           c.kclient,
 		sclient:           c.sclient,
+		iclient:           c.iclient,
 		secscanClient:     c.secscanClient,
 		namespaces:        config.Namespaces,
 		labelPrefix:       config.LabelPrefix,

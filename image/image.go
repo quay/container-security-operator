@@ -105,6 +105,22 @@ type Image struct {
 	Auth          string
 }
 
+// ApplyMirror parses the mirror url and replaces Host, Namespace and Repository in such a way
+// that the original image does not point to the same source anymore but to the configured mirror.
+func (img *Image) ApplyMirror(mirror string) {
+	switch sls := strings.SplitN(mirror, "/", 3); len(sls) {
+	case 1:
+		img.Host = sls[0]
+	case 2:
+		img.Host = sls[0]
+		img.Namespace = sls[1]
+	case 3:
+		img.Host = sls[0]
+		img.Namespace = sls[1]
+		img.Repository = sls[2]
+	}
+}
+
 // Return the image manifest id (docker-pullable)
 // See https://github.com/kubernetes/kubernetes/pull/34473
 func (img *Image) URL(subpaths ...string) string {

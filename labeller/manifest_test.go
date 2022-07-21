@@ -204,12 +204,16 @@ func (c *testClient) getManifest(namespace, name string, getOptions metav1.GetOp
 
 func (c *testClient) updateManifestStatus(manifest *secscanv1alpha1.ImageManifestVuln) (*secscanv1alpha1.ImageManifestVuln, error) {
 	ctx := context.Background()
-	return c.imageManifestVulnsClient(manifest.ObjectMeta.Namespace).UpdateStatus(ctx, manifest, metav1.UpdateOptions{})
+	man, err := c.imageManifestVulnsClient(manifest.ObjectMeta.Namespace).UpdateStatus(ctx, manifest, metav1.UpdateOptions{})
+	time.Sleep(time.Second)
+	return man, err
 }
 
 func (c *testClient) deletePod(namespace, name string, deleteOptions metav1.DeleteOptions) error {
 	ctx := context.Background()
-	return c.podsClient(namespace).Delete(ctx, name, deleteOptions)
+	err := c.podsClient(namespace).Delete(ctx, name, deleteOptions)
+	time.Sleep(time.Second)
+	return err
 }
 
 func (c *testClient) updatePodStatus(pod *corev1.Pod) (*corev1.Pod, error) {
@@ -223,6 +227,7 @@ func (c *testClient) createPod(pod *corev1.Pod) (*corev1.Pod, error) {
 	if err != nil {
 		return nil, err
 	}
+	time.Sleep(time.Second)
 	return res, err
 }
 

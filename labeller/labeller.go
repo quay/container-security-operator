@@ -386,7 +386,7 @@ func (l *Labeller) Reconcile(ctx context.Context, key string) error {
 	}
 
 	defaultSecretClient := l.kclient.CoreV1().Secrets("openshift-config")
-	clusterAuths, err := image.ParsePullSecret(defaultSecretClient, "pull-secret")
+	clusterAuths, err := image.ParsePullSecret(ctx, defaultSecretClient, "pull-secret")
 	if err != nil {
 		level.Error(l.logger).Log("msg", "fail to process global pull secret", "err", err)
 		clusterAuths = &image.DockerConfigJson{Auths: map[string]image.DockerAuth{}}

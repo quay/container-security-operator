@@ -359,6 +359,7 @@ func (l *Labeller) MirroredImages(img *image.Image, mirrors map[string][]string)
 	for _, mirror := range mirrors[hostAndNS] {
 		imgcopy := *img
 		imgcopy.ApplyMirror(mirror)
+		imgs = append(imgs, &imgcopy)
 	}
 
 	return imgs
@@ -387,6 +388,7 @@ func (l *Labeller) scan(ctx context.Context, pod *corev1.Pod, img *image.Image, 
 		}
 
 		if len(imgManifestVuln.Spec.Features) == 0 {
+			level.Info(l.logger).Log("msg", "no spec.features", "image", img.String())
 			return nil
 		}
 
@@ -402,6 +404,8 @@ func (l *Labeller) scan(ctx context.Context, pod *corev1.Pod, img *image.Image, 
 		if _, err = imageManifestVulnClient.UpdateStatus(ctx, createdVuln, metav1.UpdateOptions{}); err != nil {
 			return fmt.Errorf("error updating image manifest vuln: %w", err)
 		}
+
+		level.Info(l.logger).Log("msg", "image manifest vuln creted", "image", img.String())
 		return nil
 	}
 
@@ -542,6 +546,7 @@ func (l *Labeller) Reconcile(ctx context.Context, key string) error {
 
 	for _, imgs := range imagesToScan {
 		for _, img := range imgs {
+			level.Info(l.logger).Log("msg", "scanning", "image", img.String())
 			if err := l.scan(ctx, pod, img, key); err != nil {
 				level.Error(l.logger).Log("msg", "error scanning", "err", err)
 				continue

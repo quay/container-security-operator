@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	v1alpha1 "github.com/quay/container-security-operator/apis/secscan/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -39,7 +41,7 @@ var imagemanifestvulnsResource = schema.GroupVersionResource{Group: "secscan.qua
 var imagemanifestvulnsKind = schema.GroupVersionKind{Group: "secscan.quay.redhat.com", Version: "v1alpha1", Kind: "ImageManifestVuln"}
 
 // Get takes name of the imageManifestVuln, and returns the corresponding imageManifestVuln object, and an error if there is any.
-func (c *FakeImageManifestVulns) Get(name string, options v1.GetOptions) (result *v1alpha1.ImageManifestVuln, err error) {
+func (c *FakeImageManifestVulns) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ImageManifestVuln, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(imagemanifestvulnsResource, c.ns, name), &v1alpha1.ImageManifestVuln{})
 
@@ -50,7 +52,7 @@ func (c *FakeImageManifestVulns) Get(name string, options v1.GetOptions) (result
 }
 
 // List takes label and field selectors, and returns the list of ImageManifestVulns that match those selectors.
-func (c *FakeImageManifestVulns) List(opts v1.ListOptions) (result *v1alpha1.ImageManifestVulnList, err error) {
+func (c *FakeImageManifestVulns) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ImageManifestVulnList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(imagemanifestvulnsResource, imagemanifestvulnsKind, c.ns, opts), &v1alpha1.ImageManifestVulnList{})
 
@@ -72,14 +74,14 @@ func (c *FakeImageManifestVulns) List(opts v1.ListOptions) (result *v1alpha1.Ima
 }
 
 // Watch returns a watch.Interface that watches the requested imageManifestVulns.
-func (c *FakeImageManifestVulns) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeImageManifestVulns) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(imagemanifestvulnsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a imageManifestVuln and creates it.  Returns the server's representation of the imageManifestVuln, and an error, if there is any.
-func (c *FakeImageManifestVulns) Create(imageManifestVuln *v1alpha1.ImageManifestVuln) (result *v1alpha1.ImageManifestVuln, err error) {
+func (c *FakeImageManifestVulns) Create(ctx context.Context, imageManifestVuln *v1alpha1.ImageManifestVuln, opts v1.CreateOptions) (result *v1alpha1.ImageManifestVuln, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(imagemanifestvulnsResource, c.ns, imageManifestVuln), &v1alpha1.ImageManifestVuln{})
 
@@ -90,7 +92,7 @@ func (c *FakeImageManifestVulns) Create(imageManifestVuln *v1alpha1.ImageManifes
 }
 
 // Update takes the representation of a imageManifestVuln and updates it. Returns the server's representation of the imageManifestVuln, and an error, if there is any.
-func (c *FakeImageManifestVulns) Update(imageManifestVuln *v1alpha1.ImageManifestVuln) (result *v1alpha1.ImageManifestVuln, err error) {
+func (c *FakeImageManifestVulns) Update(ctx context.Context, imageManifestVuln *v1alpha1.ImageManifestVuln, opts v1.UpdateOptions) (result *v1alpha1.ImageManifestVuln, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(imagemanifestvulnsResource, c.ns, imageManifestVuln), &v1alpha1.ImageManifestVuln{})
 
@@ -102,7 +104,7 @@ func (c *FakeImageManifestVulns) Update(imageManifestVuln *v1alpha1.ImageManifes
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeImageManifestVulns) UpdateStatus(imageManifestVuln *v1alpha1.ImageManifestVuln) (*v1alpha1.ImageManifestVuln, error) {
+func (c *FakeImageManifestVulns) UpdateStatus(ctx context.Context, imageManifestVuln *v1alpha1.ImageManifestVuln, opts v1.UpdateOptions) (*v1alpha1.ImageManifestVuln, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceAction(imagemanifestvulnsResource, "status", c.ns, imageManifestVuln), &v1alpha1.ImageManifestVuln{})
 
@@ -113,23 +115,23 @@ func (c *FakeImageManifestVulns) UpdateStatus(imageManifestVuln *v1alpha1.ImageM
 }
 
 // Delete takes name of the imageManifestVuln and deletes it. Returns an error if one occurs.
-func (c *FakeImageManifestVulns) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeImageManifestVulns) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(imagemanifestvulnsResource, c.ns, name), &v1alpha1.ImageManifestVuln{})
+		Invokes(testing.NewDeleteActionWithOptions(imagemanifestvulnsResource, c.ns, name, opts), &v1alpha1.ImageManifestVuln{})
 
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeImageManifestVulns) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(imagemanifestvulnsResource, c.ns, listOptions)
+func (c *FakeImageManifestVulns) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(imagemanifestvulnsResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.ImageManifestVulnList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched imageManifestVuln.
-func (c *FakeImageManifestVulns) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.ImageManifestVuln, err error) {
+func (c *FakeImageManifestVulns) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ImageManifestVuln, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(imagemanifestvulnsResource, c.ns, name, pt, data, subresources...), &v1alpha1.ImageManifestVuln{})
 

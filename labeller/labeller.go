@@ -1,14 +1,15 @@
 package labeller
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	secscanv1alpha1 "github.com/quay/container-security-operator/apis/secscan/v1alpha1"
-	secscanclient "github.com/quay/container-security-operator/generated/versioned"
-	secscanv1alpha1client "github.com/quay/container-security-operator/generated/versioned/typed/secscan/v1alpha1"
+	secscanclient "github.com/quay/container-security-operator/generated/clientset/versioned"
+	secscanv1alpha1client "github.com/quay/container-security-operator/generated/clientset/versioned/typed/secscan/v1alpha1"
 	"github.com/quay/container-security-operator/image"
 	"github.com/quay/container-security-operator/k8sutils"
 	"github.com/quay/container-security-operator/prometheus"
@@ -21,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/watch"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -99,9 +101,13 @@ func New(config *Config, kubeconfig string, logger log.Logger) (*Labeller, error
 		func(namespace string) cache.ListerWatcher {
 			return &cache.ListWatch{
 				ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
-					return l.kclient.CoreV1().Pods(namespace).List(options)
+					ctx := context.Background()
+					return l.kclient.CoreV1().Pods(namespace).List(ctx, options)
 				},
-				WatchFunc: l.kclient.CoreV1().Pods(namespace).Watch,
+				WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) {
+					ctx := context.Background()
+					return l.kclient.CoreV1().Pods(namespace).Watch(ctx, opts)
+				},
 			}
 		},
 	)
@@ -122,9 +128,13 @@ func New(config *Config, kubeconfig string, logger log.Logger) (*Labeller, error
 		func(namespace string) cache.ListerWatcher {
 			return &cache.ListWatch{
 				ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
-					return l.sclient.SecscanV1alpha1().ImageManifestVulns(namespace).List(options)
+					ctx := context.Background()
+					return l.sclient.SecscanV1alpha1().ImageManifestVulns(namespace).List(ctx, options)
 				},
-				WatchFunc: l.sclient.SecscanV1alpha1().ImageManifestVulns(namespace).Watch,
+				WatchFunc: func(opts metav1.ListOptions) (watch.Interface, error) {
+					ctx := context.Background()
+					return l.sclient.SecscanV1alpha1().ImageManifestVulns(namespace).Watch(ctx, opts)
+				},
 			}
 		},
 	)
@@ -182,7 +192,7 @@ func (l *Labeller) processNextItem() bool {
 	}
 	defer l.queue.Done(key)
 
-	err := l.Reconcile(key.(string))
+	err := l.Reconcile(context.Background(), key.(string))
 	if err == nil {
 		l.queue.Forget(key)
 		return true
@@ -321,7 +331,7 @@ func (l *Labeller) sync(img *image.Image) (*secscan.Layer, error) {
 	return layerData, nil
 }
 
-func (l *Labeller) Reconcile(key string) error {
+func (l *Labeller) Reconcile(ctx context.Context, key string) error {
 	defer prometheus.ObserveReconciliationDuration()()
 
 	ns := strings.Split(key, "/")[0]
@@ -336,14 +346,14 @@ func (l *Labeller) Reconcile(key string) error {
 	if !exists {
 		// Remove pod references from existing imagemanifestvulns.
 		level.Info(l.logger).Log("msg", "Removing deleted pod from ImageManifestVulns", "key", key)
-		if err := removeAffectedPodFromManifests(imageManifestVulnClient, key); err != nil {
+		if err := removeAffectedPodFromManifests(ctx, imageManifestVulnClient, key); err != nil {
 			level.Error(l.logger).Log("msg", "Failed to remove deleted pod from ImageManifestVulns", "err", err, "key", key)
 			return err
 		}
 
 		// Garbage collect unreferenced manifests and remove dangling pods from existing manifests
 		level.Info(l.logger).Log("msg", "Garbage collecting unreferenced ImageManifestVulns", "key", key)
-		if err := garbageCollectManifests(podClient, imageManifestVulnClient); err != nil {
+		if err := garbageCollectManifests(ctx, podClient, imageManifestVulnClient); err != nil {
 			level.Error(l.logger).Log("msg", "Failed to garbage collect unreferenced ImageManifestVulns", "err", err, "key", key)
 			return fmt.Errorf("Failed to garbage collect unreferenced ImageManifestVulns: %w", err)
 		}
@@ -363,14 +373,14 @@ func (l *Labeller) Reconcile(key string) error {
 
 	// Garbage collect unreferenced manifests and remove dangling pods from existing manifests
 	level.Info(l.logger).Log("msg", "Garbage collecting unreferenced ImageManifestVulns", "key", key)
-	if err := garbageCollectManifests(podClient, imageManifestVulnClient); err != nil {
+	if err := garbageCollectManifests(ctx, podClient, imageManifestVulnClient); err != nil {
 		level.Error(l.logger).Log("msg", "Failed to garbage collect unreferenced ImageManifestVulns", "err", err)
 		return fmt.Errorf("Failed to garbage collect unreferenced ImageManifestVulns: %w", err)
 	}
 
 	// Get pull secrets, if any
 	pullSecretRefs := pod.Spec.ImagePullSecrets
-	dockerJsonConfig, err := image.ParsePullSecrets(secretClient, pullSecretRefs)
+	dockerJsonConfig, err := image.ParsePullSecrets(ctx, secretClient, pullSecretRefs)
 	if err != nil {
 		return err
 	}
@@ -419,7 +429,7 @@ func (l *Labeller) Reconcile(key string) error {
 
 			imgManifestVuln, _ = addAffectedPod(key, img.ContainerID, imgManifestVuln)
 
-			createdVuln, err := imageManifestVulnClient.Create(imgManifestVuln)
+			createdVuln, err := imageManifestVulnClient.Create(ctx, imgManifestVuln, metav1.CreateOptions{})
 			if err != nil {
 				level.Error(l.logger).Log("msg", "Error creating ImageManifestVuln", "manifestKey", manifestKey, "key", key, "err", err)
 				continue
@@ -427,7 +437,7 @@ func (l *Labeller) Reconcile(key string) error {
 
 			level.Info(l.logger).Log("msg", "Created ImageManifestVuln", "manifestKey", manifestKey, "key", key)
 			createdVuln.Status = imgManifestVuln.Status
-			if _, err = imageManifestVulnClient.UpdateStatus(createdVuln); err != nil {
+			if _, err = imageManifestVulnClient.UpdateStatus(ctx, createdVuln, metav1.UpdateOptions{}); err != nil {
 				level.Error(l.logger).Log("msg", "Error updating ImageManifestVuln status", "manifestKey", manifestKey, "key", key, "err", err)
 			}
 			continue
@@ -461,26 +471,26 @@ func (l *Labeller) Reconcile(key string) error {
 
 		imgManifestVuln, _ = addAffectedPod(key, img.ContainerID, imgManifestVuln)
 
-		updatedVuln, err := imageManifestVulnClient.Update(imgManifestVuln)
+		updatedVuln, err := imageManifestVulnClient.Update(ctx, imgManifestVuln, metav1.UpdateOptions{})
 		if err != nil {
 			level.Error(l.logger).Log("msg", "Error updating ImageManifestVuln", "key", manifestKey, "err", err)
 		}
 
 		updatedVuln.Status = imgManifestVuln.Status
-		if _, err := imageManifestVulnClient.UpdateStatus(updatedVuln); err != nil {
+		if _, err := imageManifestVulnClient.UpdateStatus(ctx, updatedVuln, metav1.UpdateOptions{}); err != nil {
 			level.Error(l.logger).Log("msg", "Error updating ImageManifestVuln status", "key", manifestKey, "err", err)
 			continue
 		}
 	}
 
 	// Populate prometheus metrics
-	l.promPopulateVulnsCount(imageManifestVulnClient)
+	l.promPopulateVulnsCount(ctx, imageManifestVulnClient)
 
 	return nil
 }
 
-func (l *Labeller) promPopulateVulnsCount(manifestclient secscanv1alpha1client.ImageManifestVulnInterface) {
-	podVulns, images, err := aggVulnerabilityCount(manifestclient)
+func (l *Labeller) promPopulateVulnsCount(ctx context.Context, manifestclient secscanv1alpha1client.ImageManifestVulnInterface) {
+	podVulns, images, err := aggVulnerabilityCount(ctx, manifestclient)
 	if err != nil {
 		level.Warn(l.logger).Log("msg", "Failed to update aggregate vulnerabilities metrics", "err", err)
 		return

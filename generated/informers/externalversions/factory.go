@@ -23,9 +23,9 @@ import (
 	sync "sync"
 	time "time"
 
+	versioned "github.com/quay/container-security-operator/generated/clientset/versioned"
 	internalinterfaces "github.com/quay/container-security-operator/generated/informers/externalversions/internalinterfaces"
 	secscan "github.com/quay/container-security-operator/generated/informers/externalversions/secscan"
-	versioned "github.com/quay/container-security-operator/generated/versioned"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

@@ -26,8 +26,10 @@ import (
 )
 
 // ImageManifestVulnLister helps list ImageManifestVulns.
+// All objects returned here must be treated as read-only.
 type ImageManifestVulnLister interface {
 	// List lists all ImageManifestVulns in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.ImageManifestVuln, err error)
 	// ImageManifestVulns returns an object that can list and get ImageManifestVulns.
 	ImageManifestVulns(namespace string) ImageManifestVulnNamespaceLister
@@ -58,10 +60,13 @@ func (s *imageManifestVulnLister) ImageManifestVulns(namespace string) ImageMani
 }
 
 // ImageManifestVulnNamespaceLister helps list and get ImageManifestVulns.
+// All objects returned here must be treated as read-only.
 type ImageManifestVulnNamespaceLister interface {
 	// List lists all ImageManifestVulns in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.ImageManifestVuln, err error)
 	// Get retrieves the ImageManifestVuln from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1alpha1.ImageManifestVuln, error)
 	ImageManifestVulnNamespaceListerExpansion
 }

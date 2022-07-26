@@ -342,26 +342,24 @@ func (l *Labeller) sync(img *image.Image) (*secscan.Layer, error) {
 // MirroredImages checks if there is a mirror configuration for the provided image. Returns a list
 // of configured mirrors or an empty slice if no mirror was found.
 func (l *Labeller) MirroredImages(img *image.Image, mirrors map[string][]string) []*image.Image {
-	imgs := make([]*image.Image, 0)
-	if _, ok := mirrors[img.Host]; ok {
-		for _, mirror := range mirrors[img.Host] {
+	searchFor := []string{
+		img.Host,
+		fmt.Sprintf("%s/%s", img.Host, img.Namespace),
+		fmt.Sprintf("%s/%s/%s", img.Host, img.Namespace, img.Repository),
+	}
+
+	var imgs = []*image.Image{}
+	for _, search := range searchFor {
+		if _, ok := mirrors[search]; !ok {
+			continue
+		}
+
+		for _, mirror := range mirrors[search] {
 			imgcopy := *img
 			imgcopy.ApplyMirror(mirror)
 			imgs = append(imgs, &imgcopy)
 		}
 	}
-
-	hostAndNS := fmt.Sprintf("%s/%s", img.Host, img.Namespace)
-	if _, ok := mirrors[hostAndNS]; !ok {
-		return imgs
-	}
-
-	for _, mirror := range mirrors[hostAndNS] {
-		imgcopy := *img
-		imgcopy.ApplyMirror(mirror)
-		imgs = append(imgs, &imgcopy)
-	}
-
 	return imgs
 }
 

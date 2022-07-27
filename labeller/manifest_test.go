@@ -14,6 +14,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	icspclient "github.com/openshift/client-go/operator/clientset/versioned"
+	fakeicspclient "github.com/openshift/client-go/operator/clientset/versioned/fake"
 	secscanv1alpha1 "github.com/quay/container-security-operator/apis/secscan/v1alpha1"
 	secscanclient "github.com/quay/container-security-operator/generated/clientset/versioned"
 	fakesecscanclient "github.com/quay/container-security-operator/generated/clientset/versioned/fake"
@@ -135,6 +137,7 @@ func manifestNameFromImageID(imageID string) string {
 
 type testClient struct {
 	kclient       kubernetes.Interface
+	iclient       icspclient.Interface
 	sclient       secscanclient.Interface
 	secscanClient *secscanfakes.FakeInterface
 	podCount      map[string]int
@@ -144,6 +147,7 @@ func newTestClient() *testClient {
 	return &testClient{
 		kclient:       fake.NewSimpleClientset(),
 		sclient:       fakesecscanclient.NewSimpleClientset(),
+		iclient:       fakeicspclient.NewSimpleClientset(),
 		secscanClient: &secscanfakes.FakeInterface{},
 		podCount:      make(map[string]int),
 	}

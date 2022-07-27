@@ -80,6 +80,15 @@ spec:
                   - secret:
                       optional: true
                       name: container-security-operator-extra-certs
+      clusterPermissions:
+      - rules:
+        - apiGroups:
+          - 'operator.openshift.io'
+          resources:
+          - imagecontentsourcepolicies
+          verbs:
+          - list
+        serviceAccountName: container-security-operator
       permissions:
       - rules:
         - apiGroups:

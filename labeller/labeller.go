@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	icspclient "github.com/openshift/client-go/operator/clientset/versioned"
 	secscanv1alpha1 "github.com/quay/container-security-operator/apis/secscan/v1alpha1"
 	secscanclient "github.com/quay/container-security-operator/generated/clientset/versioned"
 	secscanv1alpha1client "github.com/quay/container-security-operator/generated/clientset/versioned/typed/secscan/v1alpha1"
@@ -42,6 +43,7 @@ var (
 type Labeller struct {
 	kclient           kubernetes.Interface
 	sclient           secscanclient.Interface
+	iclient           icspclient.Interface
 	secscanClient     secscan.Interface
 	wellKnownEndpoint string
 	logger            log.Logger
@@ -69,6 +71,11 @@ func New(config *Config, kubeconfig string, logger log.Logger) (*Labeller, error
 		return nil, err
 	}
 
+	iclient, err := icspclient.NewForConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	sclient, err := secscanclient.NewForConfig(cfg)
 	if err != nil {
 		return nil, err
@@ -83,6 +90,7 @@ func New(config *Config, kubeconfig string, logger log.Logger) (*Labeller, error
 	l := &Labeller{
 		kclient:           kclient,
 		sclient:           sclient,
+		iclient:           iclient,
 		secscanClient:     secscanClient,
 		logger:            logger,
 		namespaces:        config.Namespaces[:],
@@ -331,6 +339,112 @@ func (l *Labeller) sync(img *image.Image) (*secscan.Layer, error) {
 	return layerData, nil
 }
 
+// MirroredImages checks if there is a mirror configuration for the provided image. Returns a list
+// of configured mirrors or an empty slice if no mirror was found.
+func (l *Labeller) MirroredImages(img *image.Image, mirrors map[string][]string) []*image.Image {
+	var images = []*image.Image{}
+	var imgref = img.IDString()
+	for source, dests := range mirrors {
+		if !strings.HasPrefix(imgref, source) {
+			continue
+		}
+
+		var srclen = len(source)
+		for _, mirror := range dests {
+			newref := fmt.Sprintf("%s%s", mirror, imgref[srclen:])
+			newimg, err := image.ParseImageID(newref)
+			if err != nil {
+				level.Error(l.logger).Log("msg", "invalid mirror ref", "ref", newref, "err", err)
+				continue
+			}
+			images = append(images, newimg)
+		}
+	}
+	return images
+}
+
+func (l *Labeller) scan(ctx context.Context, pod *corev1.Pod, img *image.Image, key string) error {
+	var imgManifestVuln *secscanv1alpha1.ImageManifestVuln
+	imageManifestVulnClient := l.sclient.SecscanV1alpha1().ImageManifestVulns(pod.Namespace)
+	manifestKey := fmt.Sprintf("%s/%s", pod.Namespace, manifestName(img.Digest))
+
+	obj, exists, err := l.imageManifestVulnInformer.GetIndexer().GetByKey(manifestKey)
+	if err != nil {
+		return fmt.Errorf("unable to get image manifest vuln: %w", err)
+	}
+
+	if !exists {
+		layerData, err := l.sync(img)
+		if err != nil {
+			return fmt.Errorf("failed to sync layer data: %w", err)
+		}
+
+		imageName := strings.Split(img.String(), ":")[0]
+		imgManifestVuln, err := buildImageManifestVuln(pod.Namespace, imageName, img.Digest, layerData)
+		if err != nil {
+			return fmt.Errorf("error building image manifest vuln: %w", err)
+		}
+
+		if len(imgManifestVuln.Spec.Features) == 0 {
+			level.Info(l.logger).Log("msg", "no spec.features", "image", img.String())
+			return nil
+		}
+
+		imgManifestVuln, _ = addAffectedPod(key, img.ContainerID, imgManifestVuln)
+
+		createdVuln, err := imageManifestVulnClient.Create(ctx, imgManifestVuln, metav1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("error creating image manifest vuln: %w", err)
+		}
+
+		level.Info(l.logger).Log("msg", "Created ImageManifestVuln", "manifestKey", manifestKey, "key", key)
+		createdVuln.Status = imgManifestVuln.Status
+		if _, err = imageManifestVulnClient.UpdateStatus(ctx, createdVuln, metav1.UpdateOptions{}); err != nil {
+			return fmt.Errorf("error updating image manifest vuln: %w", err)
+		}
+
+		level.Info(l.logger).Log("msg", "image manifest vuln creted", "image", img.String())
+		return nil
+	}
+
+	imgManifestVuln = obj.(*secscanv1alpha1.ImageManifestVuln)
+
+	// Check if the spec needs to be resynced
+	lastUpdateTime, err := lastManfestUpdateTime(imgManifestVuln)
+	if err != nil {
+		return fmt.Errorf("failed to parse image manifest vuln: %w", err)
+	}
+
+	if time.Now().UTC().Sub(*lastUpdateTime) > l.resyncThreshold {
+		level.Info(l.logger).Log("msg", "Resyncing ImageManifestVuln", manifestKey, "key", key, "err", err)
+		layerData, err := l.sync(img)
+		if err != nil {
+			return fmt.Errorf("failed to resync layer data: %w", err)
+		}
+
+		imgManifestVuln, err = updateImageManifestVulnSpec(imgManifestVuln, layerData)
+		if err != nil {
+			return fmt.Errorf("faile to update image manifest vuln spec: %w", err)
+		}
+
+		imgManifestVuln = updateImageManifestVulnLastUpdate(imgManifestVuln)
+	}
+
+	imgManifestVuln, _ = addAffectedPod(key, img.ContainerID, imgManifestVuln)
+
+	updatedVuln, err := imageManifestVulnClient.Update(ctx, imgManifestVuln, metav1.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("error updating image manifest vuln: %w", err)
+	}
+
+	updatedVuln.Status = imgManifestVuln.Status
+	if _, err := imageManifestVulnClient.UpdateStatus(ctx, updatedVuln, metav1.UpdateOptions{}); err != nil {
+		return fmt.Errorf("error updating image manifest vuln status: %w", err)
+	}
+
+	return nil
+}
+
 func (l *Labeller) Reconcile(ctx context.Context, key string) error {
 	defer prometheus.ObserveReconciliationDuration()()
 
@@ -392,105 +506,50 @@ func (l *Labeller) Reconcile(ctx context.Context, key string) error {
 		clusterAuths = &image.DockerConfigJson{Auths: map[string]image.DockerAuth{}}
 	}
 
+	icsps, err := l.iclient.OperatorV1alpha1().ImageContentSourcePolicies().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	mirrors := map[string][]string{}
+	for _, icsp := range icsps.Items {
+		for _, mirror := range icsp.Spec.RepositoryDigestMirrors {
+			mirrors[mirror.Source] = append(mirrors[mirror.Source], mirror.Mirrors...)
+		}
+	}
+
 	// Add pod containers' images to scan
-	imagesToScan := make(map[string]*image.Image)
+	imagesToScan := make(map[string][]*image.Image)
 	for _, containerStatus := range pod.Status.ContainerStatuses {
-		image, err := image.ParseContainerStatus(containerStatus)
+		img, err := image.ParseContainerStatus(containerStatus)
 		if err != nil {
 			level.Error(l.logger).Log("msg", "Error parsing imageID", "imageID", containerStatus.ImageID)
 			continue
 		}
 
-		if val, ok := dockerJsonConfig.Auths[image.Host]; ok {
-			image.Auth = val.Auth
-		} else if val, ok := clusterAuths.Auths[image.Host]; ok {
-			image.Auth = val.Auth
+		img.ContainerName = containerStatus.Name
+		images := l.MirroredImages(img, mirrors)
+		images = append(images, img)
+
+		for _, i := range images {
+			if val, ok := dockerJsonConfig.Auths[i.Host]; ok {
+				i.Auth = val.Auth
+			} else if val, ok := clusterAuths.Auths[i.Host]; ok {
+				i.Auth = val.Auth
+			}
 		}
 
-		image.ContainerName = containerStatus.Name
-		imagesToScan[image.Digest] = image
+		imagesToScan[img.Digest] = append(imagesToScan[img.Digest], images...)
 	}
 
-	for _, img := range imagesToScan {
-		var imgManifestVuln *secscanv1alpha1.ImageManifestVuln
-		manifestKey := fmt.Sprintf("%s/%s", pod.Namespace, manifestName(img.Digest))
-
-		obj, exists, err = l.imageManifestVulnInformer.GetIndexer().GetByKey(manifestKey)
-		if err != nil {
-			continue
-		}
-
-		if !exists {
-			layerData, err := l.sync(img)
-			if err != nil {
-				level.Error(l.logger).Log("msg", "Failed to sync layer data", "key", key, "err", err)
+	for _, imgs := range imagesToScan {
+		for _, img := range imgs {
+			level.Info(l.logger).Log("msg", "scanning", "image", img.String())
+			if err := l.scan(ctx, pod, img, key); err != nil {
+				level.Error(l.logger).Log("msg", "error scanning", "err", err)
 				continue
 			}
-
-			imageName := strings.Split(img.String(), ":")[0]
-			imgManifestVuln, err := buildImageManifestVuln(pod.Namespace, imageName, img.Digest, layerData)
-			if err != nil {
-				level.Error(l.logger).Log("msg", "Error building ImageManifestVuln", "manifestKey", manifestKey, "key", key, "err", err)
-				continue
-			}
-
-			if len(imgManifestVuln.Spec.Features) == 0 {
-				continue
-			}
-
-			imgManifestVuln, _ = addAffectedPod(key, img.ContainerID, imgManifestVuln)
-
-			createdVuln, err := imageManifestVulnClient.Create(ctx, imgManifestVuln, metav1.CreateOptions{})
-			if err != nil {
-				level.Error(l.logger).Log("msg", "Error creating ImageManifestVuln", "manifestKey", manifestKey, "key", key, "err", err)
-				continue
-			}
-
-			level.Info(l.logger).Log("msg", "Created ImageManifestVuln", "manifestKey", manifestKey, "key", key)
-			createdVuln.Status = imgManifestVuln.Status
-			if _, err = imageManifestVulnClient.UpdateStatus(ctx, createdVuln, metav1.UpdateOptions{}); err != nil {
-				level.Error(l.logger).Log("msg", "Error updating ImageManifestVuln status", "manifestKey", manifestKey, "key", key, "err", err)
-			}
-			continue
-		}
-
-		imgManifestVuln = obj.(*secscanv1alpha1.ImageManifestVuln)
-
-		// Check if the spec needs to be resynced
-		lastUpdateTime, err := lastManfestUpdateTime(imgManifestVuln)
-		if err != nil {
-			level.Error(l.logger).Log("msg", "Failed to parse ImageManifestVuln's lastUpdate", "manifestKey", manifestKey, "key", key, "err", err)
-			continue
-		}
-
-		if time.Now().UTC().Sub(*lastUpdateTime) > l.resyncThreshold {
-			level.Info(l.logger).Log("msg", "Resyncing ImageManifestVuln", manifestKey, "key", key, "err", err)
-			layerData, err := l.sync(img)
-			if err != nil {
-				level.Error(l.logger).Log("msg", "Failed to resync layer data", "key", key, "err", err)
-				continue
-			}
-
-			imgManifestVuln, err = updateImageManifestVulnSpec(imgManifestVuln, layerData)
-			if err != nil {
-				level.Error(l.logger).Log("msg", "Failed to update ImageManifestVuln spec", "key", manifestKey, "err", err)
-				continue
-			}
-
-			imgManifestVuln = updateImageManifestVulnLastUpdate(imgManifestVuln)
-		}
-
-		imgManifestVuln, _ = addAffectedPod(key, img.ContainerID, imgManifestVuln)
-
-		updatedVuln, err := imageManifestVulnClient.Update(ctx, imgManifestVuln, metav1.UpdateOptions{})
-		if err != nil {
-			level.Error(l.logger).Log("msg", "Error updating ImageManifestVuln", "key", manifestKey, "err", err)
-		}
-
-		updatedVuln.Status = imgManifestVuln.Status
-		if _, err := imageManifestVulnClient.UpdateStatus(ctx, updatedVuln, metav1.UpdateOptions{}); err != nil {
-			level.Error(l.logger).Log("msg", "Error updating ImageManifestVuln status", "key", manifestKey, "err", err)
-			continue
+			break
 		}
 	}
 

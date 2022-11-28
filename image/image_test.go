@@ -130,6 +130,18 @@ var containerStatusTable = []struct {
 	expectedError error
 }{
 	{
+		"my-test-repository",
+		"QUAY:443/my-test-namespace/my-test-repository:latest",
+		"docker-pullable://QUAY:443/my-test-namespace/my-test-repository@sha256:c549c6151dd8f4098fd02198913c0f6c55b240b156475588257f19d57e7b1fba",
+		"my-test-repository",
+		"QUAY:443",
+		"my-test-namespace",
+		"my-test-repository",
+		"sha256:c549c6151dd8f4098fd02198913c0f6c55b240b156475588257f19d57e7b1fba",
+		"latest",
+		nil,
+	},
+	{
 		"redis",
 		"quay.io/quay/redis:latest",
 		"docker-pullable://quay.io/quay/redis@sha256:94033a42da840b970fd9d2b04dae5fec56add2714ca674a758d030ce5acba27e",

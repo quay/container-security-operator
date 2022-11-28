@@ -268,7 +268,7 @@ func ParseContainerStatus(containerStatus v1.ContainerStatus) (*Image, error) {
 
 	// Set tag name
 	s := strings.Split(containerStatus.Image, ":")
-	if len(s) != 2 {
+	if len(s) != 2 && len(s) != 3 {
 		return nil, fmt.Errorf("Wrong image format")
 	}
 

@@ -1,0 +1,7 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: container-security-operator
+spec:
+  sourceType: grpc
+  image: quay.io/projectquay/cso-catalog@sha256:406ffb9f47d39ccadfff0852b1a0d2430888692e8a53f93208f11eb25e13a84a

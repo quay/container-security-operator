@@ -59,8 +59,7 @@ function digest() {
 	ret=$(docker inspect --format='{{index .RepoDigests 0}}' "${IMAGE}")
 }
 
-docker build -t "${REGISTRY}/${NAMESPACE}/container-security-operator:${TAG}" .
-docker push "${REGISTRY}/${NAMESPACE}/container-security-operator:${TAG}"
+docker buildx build --push --platform="linux/amd64,linux/s390x,linux/ppc64le" -t "${REGISTRY}/${NAMESPACE}/container-security-operator:${TAG}" .
 digest "${REGISTRY}/${NAMESPACE}/container-security-operator:${TAG}" OPERATOR_DIGEST
 
 # need exporting so that yq can see them
@@ -78,15 +77,32 @@ yq eval -i '
 	.spec.install.spec.deployments[0].spec.template.spec.containers[0].image = strenv(OPERATOR_DIGEST)
 	' "${CSV_PATH}"
 
-cat ${CSV_PATH} > csv_file
 yq eval -i '
 	.annotations."operators.operatorframework.io.bundle.channel.default.v1" = "test" |
 	.annotations."operators.operatorframework.io.bundle.channels.v1" = "test"
 	' "${ANNOTATIONS_PATH}"
 
-docker build -f ./bundle/Dockerfile -t "${REGISTRY}/${NAMESPACE}/container-security-operator-bundle:${TAG}" ./bundle
-docker push "${REGISTRY}/${NAMESPACE}/container-security-operator-bundle:${TAG}"
+docker buildx build --push -f ./bundle/Dockerfile --platform="linux/amd64,linux/s390x,linux/ppc64le" -t "${REGISTRY}/${NAMESPACE}/container-security-operator-bundle:${TAG}" ./bundle
 digest "${REGISTRY}/${NAMESPACE}/container-security-operator-bundle:${TAG}" BUNDLE_DIGEST
 
-opm index add --build-tool docker --bundles "${BUNDLE_DIGEST}" --tag "${REGISTRY}/${NAMESPACE}/container-security-operator-index:${TAG}"
-docker push "${REGISTRY}/${NAMESPACE}/container-security-operator-index:${TAG}"
+AMD64_DIGEST=$(skopeo inspect --raw docker://${REGISTRY}/${NAMESPACE}/container-security-operator-bundle:${TAG} | \
+	jq -r '.manifests[] | select(.platform.architecture == "amd64" and .platform.os == "linux").digest')
+POWER_DIGEST=$(skopeo inspect --raw  docker://${REGISTRY}/${NAMESPACE}/container-security-operator-bundle:${TAG} | \
+	jq -r '.manifests[] | select(.platform.architecture == "ppc64le" and .platform.os == "linux").digest')
+Z_DIGEST=$(skopeo inspect --raw  docker://${REGISTRY}/${NAMESPACE}/container-security-operator-bundle:${TAG} | \
+	jq -r '.manifests[] | select(.platform.architecture == "s390x" and .platform.os == "linux").digest')
+
+opm index add --build-tool docker --bundles "${REGISTRY}/${NAMESPACE}/container-security-operator-bundle@${AMD64_DIGEST}" \
+       	-t "${REGISTRY}/${NAMESPACE}/container-security-operator-index:${TAG}-amd64"
+docker push "${REGISTRY}/${NAMESPACE}/container-security-operator-index:${TAG}-amd64"
+opm index add --build-tool docker --bundles "${REGISTRY}/${NAMESPACE}/container-security-operator-bundle@${Z_DIGEST}" \
+       	-t "${REGISTRY}/${NAMESPACE}/container-security-operator-index:${TAG}-s390x"
+docker push "${REGISTRY}/${NAMESPACE}/container-security-operator-index:${TAG}-s390x"
+opm index add --build-tool docker --bundles "${REGISTRY}/${NAMESPACE}/container-security-operator-bundle@${POWER_DIGEST}" \
+	-t "${REGISTRY}/${NAMESPACE}/container-security-operator-index:${TAG}-ppc64le"
+docker push "${REGISTRY}/${NAMESPACE}/container-security-operator-index:${TAG}-ppc64le"
+docker manifest create --amend "${REGISTRY}/${NAMESPACE}/container-security-operator-index:${TAG}" \
+	"${REGISTRY}/${NAMESPACE}/container-security-operator-index:${TAG}-amd64" \
+	"${REGISTRY}/${NAMESPACE}/container-security-operator-index:${TAG}-s390x" \
+	"${REGISTRY}/${NAMESPACE}/container-security-operator-index:${TAG}-ppc64le"
+docker manifest push "${REGISTRY}/${NAMESPACE}/container-security-operator-index:${TAG}"

@@ -1,5 +1,6 @@
-FROM golang:1.17 as builder
+FROM --platform=$BUILDPLATFORM golang:1.17 as builder
 
+ARG TARGETOS TARGETARCH
 WORKDIR /workspace
 COPY go.mod go.mod
 COPY go.sum go.sum
@@ -15,7 +16,7 @@ COPY prometheus/ prometheus/
 COPY secscan/ secscan/
 COPY Makefile Makefile
 
-RUN CGO_ENABLED=0 GOOS=linux make build
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH make build
 
 FROM alpine:3.10
 WORKDIR /

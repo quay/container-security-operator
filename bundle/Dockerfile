@@ -1,12 +1,10 @@
-FROM quay.io/operator-framework/upstream-registry-builder as builder
-
-COPY manifests manifests
-RUN ./bin/initializer -o ./bundles.db
-
 FROM scratch
-COPY --from=builder /build/bundles.db /bundles.db
-COPY --from=builder /build/bin/registry-server /registry-server
-COPY --from=builder /bin/grpc_health_probe /bin/grpc_health_probe
-EXPOSE 50051
-ENTRYPOINT ["/registry-server"]
-CMD ["--database", "bundles.db"]
+LABEL operators.operatorframework.io.bundle.channel.default.v1: stable-3.6
+LABEL operators.operatorframework.io.bundle.channels.v1: stable-3.6
+LABEL operators.operatorframework.io.bundle.manifests.v1: manifests/
+LABEL operators.operatorframework.io.bundle.mediatype.v1: registry+v1
+LABEL operators.operatorframework.io.bundle.metadata.v1: metadata/
+LABEL operators.operatorframework.io.bundle.package.v1: container-security-operator
+
+ADD manifests /manifests
+ADD metadata/annotations.yaml /metadata/annotations.yaml

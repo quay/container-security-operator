@@ -15,7 +15,7 @@ COPY prometheus/ prometheus/
 COPY secscan/ secscan/
 COPY Makefile Makefile
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build
+RUN CGO_ENABLED=0 GOOS=linux make build
 
 FROM alpine:3.10
 WORKDIR /

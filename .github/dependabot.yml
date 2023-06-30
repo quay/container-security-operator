@@ -6,4 +6,3 @@ updates:
       interval: weekly
     assignees:
       - dmage
-    open-pull-requests-limit: 1

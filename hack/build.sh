@@ -12,8 +12,10 @@
 # REQUIREMENTS:
 #  * a valid login session to a container registry.
 #  * `docker`
+#  * `jq`
 #  * `yq`
 #  * `opm`
+#  * `skopeo`
 #
 # NOTE: this script will modify the following files:
 #  - bundle/manifests/container-security-operator.clusterserviceversion.yaml

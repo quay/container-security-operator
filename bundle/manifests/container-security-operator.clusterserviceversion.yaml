@@ -11,6 +11,11 @@ metadata:
     tectonic-visibility: ocs
   name: container-security-operator.v1.0.6
   namespace: placeholder
+  labels:
+    operatorframework.io/arch.amd64: supported
+    operatorframework.io/arch.s390x: supported
+    operatorframework.io/arch.ppc64le: supported
+    operatorframework.io/os.linux: supported
 spec:
   customresourcedefinitions:
     owned:

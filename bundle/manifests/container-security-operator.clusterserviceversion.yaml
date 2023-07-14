@@ -9,6 +9,7 @@ metadata:
     description: Identify image vulnerabilities in Kubernetes pods
     repository: https://github.com/quay/container-security-operator
     tectonic-visibility: ocs
+    operators.openshift.io/infrastructure-features: '["fips"]'
   name: container-security-operator.v1.0.6
   namespace: placeholder
   labels:

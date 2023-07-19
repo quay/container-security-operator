@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1.17 as builder
+FROM --platform=$BUILDPLATFORM golang:1.19 as builder
 
 ARG TARGETOS TARGETARCH
 WORKDIR /workspace
@@ -16,7 +16,7 @@ COPY prometheus/ prometheus/
 COPY secscan/ secscan/
 COPY Makefile Makefile
 
-RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH make build
+RUN CGO_ENABLED=0 GOEXPERIMENT=boringcrypto GOOS=$TARGETOS GOARCH=$TARGETARCH make build
 
 FROM alpine:3.10
 WORKDIR /

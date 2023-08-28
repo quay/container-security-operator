@@ -3,7 +3,7 @@ module github.com/quay/container-security-operator
 go 1.17
 
 require (
-	github.com/go-kit/kit v0.12.0
+	github.com/go-kit/kit v0.13.0
 	github.com/openshift/client-go v0.0.0-20230626133714-296133fbf75e
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.16.0

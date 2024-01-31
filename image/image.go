@@ -91,9 +91,10 @@ func ParsePullSecrets(ctx context.Context, secretClient corev1.SecretInterface, 
 }
 
 // Formats:
-//     {scheme}://{repo}@{digest} (images from dockerhub)
-//     {scheme}://{namespace}/{repo}@{digest} (images from dockerhub)
-//     {scheme}://{host}/{namespace}/{repo}@{digest}
+//
+//	{scheme}://{repo}@{digest} (images from dockerhub)
+//	{scheme}://{namespace}/{repo}@{digest} (images from dockerhub)
+//	{scheme}://{host}/{namespace}/{repo}@{digest}
 type Image struct {
 	ContainerName string
 	ContainerID   string
@@ -250,7 +251,18 @@ func ParseImageID(imageID string) (*Image, error) {
 
 func ParseContainerStatus(containerStatus v1.ContainerStatus) (*Image, error) {
 	// Parse imageID (digest)
-	image, err := ParseImageID(containerStatus.ImageID)
+	// cri-o will set the imageID to a random digest, in which case fallback to image
+	var imageID string
+	if regexp.MustCompile("^[a-zA-Z0-9_]*$").MatchString(containerStatus.ImageID) {
+		imageID = containerStatus.Image
+		digest := strings.SplitN(imageID, "@", 2)
+		if len(digest) != 2 {
+			return nil, fmt.Errorf("both image and imageID status fields do not contain digest: %s", imageID)
+		}
+	} else {
+		imageID = containerStatus.ImageID
+	}
+	image, err := ParseImageID(imageID)
 	if err != nil {
 		return nil, err
 	}
@@ -269,7 +281,7 @@ func ParseContainerStatus(containerStatus v1.ContainerStatus) (*Image, error) {
 	// Set tag name
 	s := strings.Split(containerStatus.Image, ":")
 	if len(s) != 2 && len(s) != 3 {
-		return nil, fmt.Errorf("Wrong image format")
+		return nil, fmt.Errorf("Wrong image format: %s", containerStatus.Image)
 	}
 
 	tagname := s[len(s)-1]

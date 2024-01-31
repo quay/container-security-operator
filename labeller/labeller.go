@@ -403,7 +403,7 @@ func (l *Labeller) scan(ctx context.Context, pod *corev1.Pod, img *image.Image, 
 			return fmt.Errorf("error updating image manifest vuln: %w", err)
 		}
 
-		level.Info(l.logger).Log("msg", "image manifest vuln creted", "image", img.String())
+		level.Info(l.logger).Log("msg", "image manifest vuln created", "image", img.String())
 		return nil
 	}
 
@@ -523,7 +523,7 @@ func (l *Labeller) Reconcile(ctx context.Context, key string) error {
 	for _, containerStatus := range pod.Status.ContainerStatuses {
 		img, err := image.ParseContainerStatus(containerStatus)
 		if err != nil {
-			level.Error(l.logger).Log("msg", "Error parsing imageID", "imageID", containerStatus.ImageID)
+			level.Error(l.logger).Log("msg", "Error parsing imageID", "err", err)
 			continue
 		}
 

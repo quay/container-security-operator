@@ -131,6 +131,20 @@ var containerStatusTable = []struct {
 }{
 	{
 		"my-test-repository",
+		"QUAY:443/my-test-namespace/my-test-repository@sha256:c549c6151dd8f4098fd02198913c0f6c55b240b156475588257f19d57e7b1fba",
+		"cf879a45faaacd2806705321f157c4c77682c7599589fed65d80f19bb61615a6",
+
+		"my-test-repository",
+		"QUAY:443",
+		"my-test-namespace",
+		"my-test-repository",
+		"sha256:c549c6151dd8f4098fd02198913c0f6c55b240b156475588257f19d57e7b1fba",
+		"",
+
+		nil,
+	},
+	{
+		"my-test-repository",
 		"QUAY:443/my-test-namespace/my-test-repository:latest",
 		"docker-pullable://QUAY:443/my-test-namespace/my-test-repository@sha256:c549c6151dd8f4098fd02198913c0f6c55b240b156475588257f19d57e7b1fba",
 		"my-test-repository",
@@ -238,6 +252,20 @@ var containerStatusTable = []struct {
 		"",
 
 		fmt.Errorf("Invalid imageID format: %s", "sha256:94033a42da840b970fd9d2b04dae5fec56add2714ca674a758d030ce5acba27e"),
+	},
+	{
+		"my-test-repository",
+		"QUAY:443/my-test-namespace/my-test-repository:latest",
+		"cf879a45faaacd2806705321f157c4c77682c7599589fed65d80f19bb61615a6",
+
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+
+		fmt.Errorf("both image and imageID status fields do not contain digest: %s", "QUAY:443/my-test-namespace/my-test-repository:latest"),
 	},
 }
 

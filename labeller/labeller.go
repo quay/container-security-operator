@@ -520,14 +520,13 @@ func (l *Labeller) Reconcile(ctx context.Context, key string) error {
 
 	// Add pod containers' images to scan
 	imagesToScan := make(map[string][]*image.Image)
-	for _, containerStatus := range pod.Status.ContainerStatuses {
-		img, err := image.ParseContainerStatus(containerStatus)
+	for _, container := range pod.Spec.Containers {
+		img, err := image.ParseContainer(pod, container.Name)
 		if err != nil {
 			level.Error(l.logger).Log("msg", "Error parsing imageID", "err", err)
 			continue
 		}
 
-		img.ContainerName = containerStatus.Name
 		images := l.MirroredImages(img, mirrors)
 		images = append(images, img)
 

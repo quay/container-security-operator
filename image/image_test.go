@@ -279,7 +279,7 @@ var containerStatusTable = []struct {
 		"",
 		"",
 
-		fmt.Errorf("both image and imageID status fields do not contain digest: %s", "QUAY:443/my-test-namespace/my-test-repository:latest"),
+		fmt.Errorf("both image fields in container and containerStatus do not contain digest: %s", "QUAY:443/my-test-namespace/my-test-repository:latest"),
 	},
 }
 

@@ -249,15 +249,41 @@ func ParseImageID(imageID string) (*Image, error) {
 	return image, nil
 }
 
-func ParseContainerStatus(containerStatus v1.ContainerStatus) (*Image, error) {
+func ParseContainer(pod *v1.Pod, containerName string) (*Image, error) {
+	// Get the container
+	var container v1.Container
+	for _, c := range pod.Spec.Containers {
+		if c.Name == containerName {
+			container = c
+			break
+		}
+	}
+	if container.Name != containerName {
+		return nil, fmt.Errorf("unable to find container: %s", containerName)
+	}
+
+	// Get the container status
+	var containerStatus v1.ContainerStatus
+	for _, cs := range pod.Status.ContainerStatuses {
+		if cs.Name == containerName {
+			containerStatus = cs
+			break
+		}
+	}
+	if containerStatus.Name != containerName {
+		return nil, fmt.Errorf("unable to find container status for container: %s", containerName)
+	}
+
 	// Parse imageID (digest)
-	// cri-o will set the imageID to a random digest, in which case fallback to image
+	// cri-o will set the imageID to a random digest, in which case fallback to
+	// container.image. We cannot rely on containerstatus.image as it will not always
+	// point to the image that was specified in the pod spec
 	var imageID string
 	if regexp.MustCompile("^[a-zA-Z0-9_]*$").MatchString(containerStatus.ImageID) {
-		imageID = containerStatus.Image
+		imageID = container.Image
 		digest := strings.SplitN(imageID, "@", 2)
 		if len(digest) != 2 {
-			return nil, fmt.Errorf("both image and imageID status fields do not contain digest: %s", imageID)
+			return nil, fmt.Errorf("both image fields in container and containerStatus do not contain digest: %s", imageID)
 		}
 	} else {
 		imageID = containerStatus.ImageID
@@ -268,20 +294,20 @@ func ParseContainerStatus(containerStatus v1.ContainerStatus) (*Image, error) {
 	}
 
 	// Set container name
-	image.ContainerName = containerStatus.Name
+	image.ContainerName = container.Name
 
 	// Set container id
 	image.ContainerID = containerStatus.ContainerID
 
 	// Check if image was pulled by digest or tag
-	if len(strings.SplitN(containerStatus.Image, "@", 2)) > 1 {
+	if len(strings.SplitN(container.Image, "@", 2)) > 1 {
 		return image, nil
 	}
 
 	// Set tag name
-	s := strings.Split(containerStatus.Image, ":")
+	s := strings.Split(container.Image, ":")
 	if len(s) != 2 && len(s) != 3 {
-		return nil, fmt.Errorf("Wrong image format: %s", containerStatus.Image)
+		return nil, fmt.Errorf("Wrong image format: %s", container.Image)
 	}
 
 	tagname := s[len(s)-1]

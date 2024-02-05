@@ -97,7 +97,7 @@ func generateManifest(namespace, name string, pods []*corev1.Pod) (*secscanv1alp
 	for _, pod := range pods {
 		containerIds := []string{}
 		for _, containerStatus := range pod.Status.ContainerStatuses {
-			img, err := image.ParseContainerStatus(containerStatus)
+			img, err := image.ParseContainer(pod, containerStatus.Name)
 			if err != nil {
 				return nil, err
 			}

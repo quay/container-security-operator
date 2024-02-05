@@ -10,11 +10,25 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-func generateContainerStatus(name, image, imageID string) v1.ContainerStatus {
-	cs := v1.ContainerStatus{
-		Name:    name,
-		Image:   image,
-		ImageID: imageID,
+func generatePod(name, image, imageID string) v1.Pod {
+	cs := v1.Pod{
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{
+					Name:  name,
+					Image: image,
+				},
+			},
+		},
+		Status: v1.PodStatus{
+			ContainerStatuses: []v1.ContainerStatus{
+				{
+					Name:    name,
+					Image:   image,
+					ImageID: imageID,
+				},
+			},
+		},
 	}
 	return cs
 }
@@ -271,7 +285,7 @@ var containerStatusTable = []struct {
 
 func TestParseContainerStatus(t *testing.T) {
 	for _, tt := range containerStatusTable {
-		containerStatus := generateContainerStatus(tt.name, tt.image, tt.imageID)
+		pod := generatePod(tt.name, tt.image, tt.imageID)
 		var image = &Image{
 			ContainerName: tt.containername,
 			Host:          tt.host,
@@ -281,12 +295,12 @@ func TestParseContainerStatus(t *testing.T) {
 			Tag:           tt.tag,
 		}
 
-		parsedContainerStatus, err := ParseContainerStatus(containerStatus)
+		parsedContainerStatus, err := ParseContainer(&pod, tt.name)
 		if tt.expectedError != nil {
 			assert.Error(t, err)
 			assert.Equal(t, tt.expectedError, err)
 		} else if !reflect.DeepEqual(image, parsedContainerStatus) {
-			t.Errorf("Incorrectly parsed %+v as %+v", containerStatus, parsedContainerStatus)
+			t.Errorf("Incorrectly parsed %+v as %+v", pod, parsedContainerStatus)
 		}
 	}
 }

@@ -10,13 +10,26 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-func generateContainerStatus(name, image, imageID string) v1.ContainerStatus {
-	cs := v1.ContainerStatus{
-		Name:    name,
-		Image:   image,
-		ImageID: imageID,
+func generatePod(name, image, imageID string) v1.Pod {
+	return v1.Pod{
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{
+					Name:  name,
+					Image: image,
+				},
+			},
+		},
+		Status: v1.PodStatus{
+			ContainerStatuses: []v1.ContainerStatus{
+				{
+					Name:    name,
+					Image:   image,
+					ImageID: imageID,
+				},
+			},
+		},
 	}
-	return cs
 }
 
 var imageTable = []struct {
@@ -131,6 +144,20 @@ var containerStatusTable = []struct {
 }{
 	{
 		"my-test-repository",
+		"QUAY:443/my-test-namespace/my-test-repository@sha256:c549c6151dd8f4098fd02198913c0f6c55b240b156475588257f19d57e7b1fba",
+		"cf879a45faaacd2806705321f157c4c77682c7599589fed65d80f19bb61615a6",
+
+		"my-test-repository",
+		"QUAY:443",
+		"my-test-namespace",
+		"my-test-repository",
+		"sha256:c549c6151dd8f4098fd02198913c0f6c55b240b156475588257f19d57e7b1fba",
+		"",
+
+		nil,
+	},
+	{
+		"my-test-repository",
 		"QUAY:443/my-test-namespace/my-test-repository:latest",
 		"docker-pullable://QUAY:443/my-test-namespace/my-test-repository@sha256:c549c6151dd8f4098fd02198913c0f6c55b240b156475588257f19d57e7b1fba",
 		"my-test-repository",
@@ -239,11 +266,25 @@ var containerStatusTable = []struct {
 
 		fmt.Errorf("Invalid imageID format: %s", "sha256:94033a42da840b970fd9d2b04dae5fec56add2714ca674a758d030ce5acba27e"),
 	},
+	{
+		"my-test-repository",
+		"QUAY:443/my-test-namespace/my-test-repository:latest",
+		"cf879a45faaacd2806705321f157c4c77682c7599589fed65d80f19bb61615a6",
+
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+
+		fmt.Errorf("both image fields in container and containerStatus do not contain digest: %s", "QUAY:443/my-test-namespace/my-test-repository:latest"),
+	},
 }
 
 func TestParseContainerStatus(t *testing.T) {
 	for _, tt := range containerStatusTable {
-		containerStatus := generateContainerStatus(tt.name, tt.image, tt.imageID)
+		pod := generatePod(tt.name, tt.image, tt.imageID)
 		var image = &Image{
 			ContainerName: tt.containername,
 			Host:          tt.host,
@@ -253,12 +294,12 @@ func TestParseContainerStatus(t *testing.T) {
 			Tag:           tt.tag,
 		}
 
-		parsedContainerStatus, err := ParseContainerStatus(containerStatus)
+		parsedContainerStatus, err := ParseContainer(&pod, tt.name)
 		if tt.expectedError != nil {
 			assert.Error(t, err)
 			assert.Equal(t, tt.expectedError, err)
 		} else if !reflect.DeepEqual(image, parsedContainerStatus) {
-			t.Errorf("Incorrectly parsed %+v as %+v", containerStatus, parsedContainerStatus)
+			t.Errorf("Incorrectly parsed %+v as %+v", pod, parsedContainerStatus)
 		}
 	}
 }

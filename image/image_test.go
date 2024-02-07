@@ -11,7 +11,7 @@ import (
 )
 
 func generatePod(name, image, imageID string) v1.Pod {
-	cs := v1.Pod{
+	return v1.Pod{
 		Spec: v1.PodSpec{
 			Containers: []v1.Container{
 				{
@@ -30,7 +30,6 @@ func generatePod(name, image, imageID string) v1.Pod {
 			},
 		},
 	}
-	return cs
 }
 
 var imageTable = []struct {

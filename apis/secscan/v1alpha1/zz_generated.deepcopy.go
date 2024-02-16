@@ -39,6 +39,16 @@ func (in *Feature) DeepCopyInto(out *Feature) {
 			}
 		}
 	}
+	if in.BaseScores != nil {
+		in, out := &in.BaseScores, &out.BaseScores
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
+	if in.CVEIds != nil {
+		in, out := &in.CVEIds, &out.CVEIds
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

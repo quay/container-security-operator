@@ -12,6 +12,8 @@ type Feature struct {
 	NamespaceName   string           `json:"namespaceName,omitempty"`
 	Version         string           `json:"version,omitempty"`
 	Vulnerabilities []*Vulnerability `json:"vulnerabilities,omitempty"`
+	BaseScores      []string         `json:"basescores,omitempty"`
+	CVEIds          []string         `json:"cveids,omitempty"`
 }
 
 type Vulnerability struct {

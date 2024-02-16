@@ -4,6 +4,7 @@ package secscan
 
 import (
 	"encoding/json"
+	"fmt"
 
 	secscanv1alpha1 "github.com/quay/container-security-operator/apis/secscan/v1alpha1"
 	"github.com/quay/container-security-operator/image"
@@ -51,6 +52,8 @@ type Feature struct {
 	Version         string           `json:"Version,omitempty"`
 	Vulnerabilities []*Vulnerability `json:"Vulnerabilities,omitempty"`
 	AddedBy         string           `json:"AddedBy,omitempty"`
+	BaseScores      []float64        `json:"BaseScores,omitempty"`
+	CVEIds          []string         `json:"CVEIds,omitempty"`
 }
 
 func (f *Feature) ToSecscanFeature() *secscanv1alpha1.Feature {
@@ -58,11 +61,19 @@ func (f *Feature) ToSecscanFeature() *secscanv1alpha1.Feature {
 	for _, v := range f.Vulnerabilities {
 		vulnerabilities = append(vulnerabilities, v.ToSecscanVulnerability())
 	}
+
+	var baseScores []string
+	for i := range f.BaseScores {
+		baseScores = append(baseScores, fmt.Sprintf("%.2f", f.BaseScores[i]))
+	}
+
 	return &secscanv1alpha1.Feature{
 		Name:            f.Name,
 		VersionFormat:   f.VersionFormat,
 		NamespaceName:   f.NamespaceName,
 		Version:         f.Version,
+		BaseScores:      baseScores,
+		CVEIds:          f.CVEIds,
 		Vulnerabilities: vulnerabilities,
 	}
 }

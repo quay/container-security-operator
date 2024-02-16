@@ -70,20 +70,8 @@ make run
 
 To regenerate the CRD code:
 ```
-# deepcopy
-make deepcopy
-# openapi
-make openapi
-# clientset
-make clientset
-# listers
-make listers
-# informers
-make informers
-# generate all
-codegen
-# generate all in a container
-codegen-container
+make get-code-generator
+make codegen
 ```
 
 ### Deploying using OLM

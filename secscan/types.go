@@ -64,7 +64,7 @@ func (f *Feature) ToSecscanFeature() *secscanv1alpha1.Feature {
 
 	var baseScores []string
 	for i := range f.BaseScores {
-		baseScores = append(baseScores, fmt.Sprintf("%.2f", f.BaseScores[i]))
+		baseScores = append(baseScores, fmt.Sprintf("%.1f", f.BaseScores[i]))
 	}
 
 	return &secscanv1alpha1.Feature{

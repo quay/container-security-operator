@@ -306,8 +306,16 @@ func ParseContainer(pod *v1.Pod, containerName string) (*Image, error) {
 
 	// Set tag name
 	s := strings.Split(container.Image, ":")
-	if len(s) != 2 && len(s) != 3 {
+	if len(s) > 3 {
 		return nil, fmt.Errorf("Wrong image format: %s", container.Image)
+	}
+
+	// If the string after the colon contains a / we
+	// can assume it's the repository and no tag has been
+	// defined.
+	if len(s) == 1 || strings.Contains(s[len(s)-1], "/") {
+		image.Tag = "latest"
+		return image, nil
 	}
 
 	tagname := s[len(s)-1]

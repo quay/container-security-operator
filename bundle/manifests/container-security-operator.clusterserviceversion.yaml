@@ -9,6 +9,13 @@ metadata:
     description: Identify image vulnerabilities in Kubernetes pods
     repository: https://github.com/quay/container-security-operator
     tectonic-visibility: ocs
+    features.operators.openshift.io/disconnected: "false"
+    features.operators.openshift.io/fips-compliant: "true"
+    features.operators.openshift.io/proxy-aware: "false"
+    features.operators.openshift.io/tls-profiles: "false"
+    features.operators.openshift.io/token-auth-aws: "false"
+    features.operators.openshift.io/token-auth-azure: "false"
+    features.operators.openshift.io/token-auth-gcp: "false"
   name: container-security-operator.v1.0.6
   namespace: placeholder
 spec:

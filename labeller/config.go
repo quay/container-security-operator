@@ -1,7 +1,7 @@
 package labeller
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"time"
 
@@ -33,7 +33,7 @@ func LoadConfig(cfgPath string) (*Config, error) {
 	}
 	defer f.Close()
 
-	d, err := ioutil.ReadAll(f)
+	d, err := io.ReadAll(f)
 	if err != nil {
 		return nil, err
 	}

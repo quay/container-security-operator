@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"flag"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
@@ -125,7 +124,7 @@ func handleCerts(insecure bool, extraCerts string) error {
 		if info.IsDir() {
 			return nil
 		}
-		certs, err := ioutil.ReadFile(path)
+		certs, err := os.ReadFile(path)
 
 		if err != nil {
 			return nil

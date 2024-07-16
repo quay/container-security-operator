@@ -3,9 +3,10 @@ package secscan
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 
@@ -49,7 +50,7 @@ func (c *Client) GetLayerDataFromTemplate(template string, image *image.Image, f
 		return nil, fmt.Errorf("Request returned non-200 response: %s", resp.Status)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -68,6 +69,7 @@ func (c *Client) GetLayerDataFromTemplate(template string, image *image.Image, f
 }
 
 func layerDataFromTemplateRequest(template, method string, img *image.Image, params map[string]string) (*rest.Request, error) {
+	var userAgent string
 	replacer := strings.NewReplacer("{namespace}", img.Namespace, "{reponame}", img.Repository, "{digest}", img.Digest)
 	requestURI := replacer.Replace(template)
 	url, err := url.ParseRequestURI(requestURI)
@@ -79,6 +81,15 @@ func layerDataFromTemplateRequest(template, method string, img *image.Image, par
 	if img.Auth != "" {
 		req = req.SetHeader("Authorization", fmt.Sprintf("Basic %s", img.Auth))
 	}
+
+	env, isPresent := os.LookupEnv("QUAY_VERSION")
+	if !isPresent {
+		userAgent = "container-security-operator/1.0.6"
+	} else {
+		userAgent = env
+	}
+
+	req = req.SetHeader("User-Agent", userAgent)
 
 	for key, val := range params {
 		req = req.SetParam(key, val)

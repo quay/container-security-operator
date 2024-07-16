@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/go-kit/kit/log"
+	log "github.com/go-kit/log"
 	"github.com/stretchr/testify/assert"
 
 	secscanv1alpha1 "github.com/quay/container-security-operator/apis/secscan/v1alpha1"

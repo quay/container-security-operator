@@ -3,7 +3,7 @@ package secscan
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -69,7 +69,7 @@ func NewWellknownClient(host, wellKnownEndpoint string) (*WellknownClient, error
 		return nil, fmt.Errorf("Request returned non-200 response: %s", resp.Status)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}

@@ -3,7 +3,7 @@ package quay
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"path"
@@ -49,7 +49,7 @@ func (c *SecscanClient) ManifestSecurity(namespace, repository, digest string, v
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		// Error reading response body
 		return nil, err
@@ -79,7 +79,7 @@ func (c *SecscanClient) ManifestSecurityFromTemplate(template, namespace, reposi
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		// Error reading response body
 		return nil, err
@@ -113,7 +113,7 @@ func (c *SecscanClient) GetLayerData(image *image.Image, features, vulnerabiliti
 		return nil, fmt.Errorf("Request returned non-200 response: %s", resp.Status)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		// Error reading response body
 		return nil, fmt.Errorf("failed to perform request: %v", err)

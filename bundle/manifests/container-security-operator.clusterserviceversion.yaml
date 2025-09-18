@@ -129,6 +129,85 @@ spec:
           verbs:
           - get
         serviceAccountName: container-security-operator
+      networkPolicies:
+      - name: container-security-operator
+        spec:
+          podSelector:
+            matchLabels:
+              name: container-security-operator-alm-owned
+          policyTypes:
+          - Ingress
+          - Egress
+          ingress:
+          # Allow Prometheus scraping on metrics port
+          - from:
+            - namespaceSelector:
+                matchLabels:
+                  name: openshift-monitoring
+            - namespaceSelector:
+                matchLabels:
+                  name: monitoring
+            - namespaceSelector:
+                matchLabels:
+                  name: prometheus
+            ports:
+            - protocol: TCP
+              port: 8081
+          # Allow Kubernetes API server communication
+          - from:
+            - namespaceSelector: {}
+            ports:
+            - protocol: TCP
+              port: 443
+            - protocol: TCP
+              port: 6443
+          egress:
+          # Allow DNS resolution
+          - to: []
+            ports:
+            - protocol: UDP
+              port: 53
+            - protocol: TCP
+              port: 53
+          # Allow HTTPS connections to container registries and external services
+          - to: []
+            ports:
+            - protocol: TCP
+              port: 443
+          # Allow HTTP connections for well-known endpoint discovery (fallback)
+          - to: []
+            ports:
+            - protocol: TCP
+              port: 80
+          # Allow Kubernetes API server communication
+          - to:
+            - namespaceSelector:
+                matchLabels:
+                  name: kube-system
+            - namespaceSelector:
+                matchLabels:
+                  name: openshift-kube-apiserver
+            - namespaceSelector:
+                matchLabels:
+                  name: openshift-apiserver
+            ports:
+            - protocol: TCP
+              port: 443
+            - protocol: TCP
+              port: 6443
+          # Allow communication with OpenShift operator APIs
+          - to:
+            - namespaceSelector:
+                matchLabels:
+                  name: openshift-operator-lifecycle-manager
+            - namespaceSelector:
+                matchLabels:
+                  name: openshift-marketplace
+            ports:
+            - protocol: TCP
+              port: 443
+            - protocol: TCP
+              port: 6443
     strategy: deployment
   installModes:
   - supported: true

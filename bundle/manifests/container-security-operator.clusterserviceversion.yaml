@@ -163,4 +163,4 @@ spec:
       alm-owner-container-security-operator: container-security-operator
       operated-by: container-security-operator
   version: 1.0.6
-  # replaces: container-security-operator.v1.0.5
+  replaces: container-security-operator.v1.0.5

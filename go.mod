@@ -1,6 +1,6 @@
 module github.com/quay/container-security-operator
 
-go 1.17
+go 1.23.1
 
 require (
 	github.com/go-kit/kit v0.9.0

@@ -130,3 +130,26 @@ Check if a pod has any vulnerability, and list the CVEs, if any:
 ```sh
 $ kubectl get imagemanifestvulns.secscan.quay.redhat.com --selector=<namespace>/<pod-name> -o jsonpath='{.items[*].spec.features[*].vulnerabilities[*].name}'
 ```
+
+## Contextification Addendum
+
+```mermaid
+flowchart LR
+    quay[Quay and Clair]
+    vuln[ImageManifestVuln]
+    operator[container-security-operator]
+    pods[Pods]
+    labels[security labels]
+    console[OpenShift console]
+
+    quay --> vuln
+    vuln --> operator
+    pods --> operator
+    operator --> labels
+    labels --> pods
+    pods --> console
+```
+
+Key paths: `apis/secscan/v1alpha1/`, `cmd/`, `labeller/`, `secscan/`, `image/`, `generated/`, `bundle/`, and `hack/`.
+
+Use `make build`, `make run`, `make installcrds`, `go test -v ./...`, and `make codegen`. Do not edit generated clients manually.

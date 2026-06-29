@@ -40,3 +40,18 @@ For specific topics, see:
 - @agent_docs/architecture.md - Component details, CRD structure, configuration
 - @agent_docs/development.md - Building, testing, code generation
 - @agent_docs/deployment.md - OLM deployment, container builds
+
+## Contextification Addendum
+
+Low-token routing:
+
+- Entrypoint: `cmd/`
+- CRD/API: `apis/secscan/v1alpha1/`
+- Reconciliation/labelling: `labeller/`
+- Registry security client: `secscan/`
+- Image parsing: `image/`
+- Generated clients: `generated/` (do not edit)
+
+Commands: `make build`, `make run`, `make installcrds`, `go test -v ./...`, `make codegen`.
+
+Guardrail: pod labels are summaries; full CVE details belong in `ImageManifestVuln`.

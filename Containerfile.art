@@ -1,0 +1,27 @@
+FROM registry.redhat.io/ubi9/go-toolset:1.25 AS builder
+
+USER 0
+
+WORKDIR /workspace
+COPY . container-security-operator/
+
+WORKDIR /workspace/container-security-operator
+RUN go mod download
+
+RUN CGO_ENABLED=1 make build
+
+FROM registry.redhat.io/ubi9/ubi-minimal:latest
+
+LABEL com.redhat.component="container-security-operator-container"
+LABEL name="quay/quay-container-security-operator-rhel9"
+LABEL io.k8s.display-name="Red Hat Quay Container Security Operator"
+LABEL io.k8s.description="Red Hat Quay Container Security Operator image"
+LABEL io.openshift.tags="quay,security"
+LABEL summary="Red Hat Quay Container Security Operator"
+LABEL description="Red Hat Quay Container Security Operator"
+LABEL vendor="Red Hat, Inc."
+LABEL maintainer="quay-devel@redhat.com"
+
+WORKDIR /
+COPY --from=builder /workspace/container-security-operator/bin/security-labeller /bin/security-labeller
+ENTRYPOINT ["/bin/security-labeller"]

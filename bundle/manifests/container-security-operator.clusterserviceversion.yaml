@@ -106,6 +106,15 @@ spec:
           - imagecontentsourcepolicies
           verbs:
           - list
+        - apiGroups:
+          - networking.k8s.io
+          resources:
+          - networkpolicies
+          verbs:
+          - create
+          - delete
+          - update
+          - patch
         serviceAccountName: container-security-operator
       permissions:
       - rules:

@@ -3,7 +3,7 @@ kind: ImageStream
 apiVersion: image.openshift.io/v1
 spec:
   tags:
-  - name: quay-container-security-operator-rhel9
+  - name: quay-container-security-rhel9-operator
     from:
       kind: DockerImage
-      name: quay.io/projectquay/container-security-operator:latest
+      name: registry.redhat.io/quay/quay-container-security-rhel9-operator

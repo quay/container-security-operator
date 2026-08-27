@@ -2,5 +2,5 @@
 packageName: container-security-operator
 channels:
 - name: stable-3.17
-  currentCSV: container-security-operator.3.17.5
+  currentCSV: container-security-operator.3.17.6
 defaultChannel: stable-3.17

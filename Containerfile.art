@@ -13,7 +13,7 @@ RUN CGO_ENABLED=1 make build
 FROM registry.redhat.io/ubi9/ubi-minimal:latest
 
 LABEL com.redhat.component="container-security-operator-container"
-LABEL name="quay/quay-container-security-operator-rhel9"
+LABEL name="quay/quay-container-security-rhel9-operator"
 LABEL io.k8s.display-name="Red Hat Quay Container Security Operator"
 LABEL io.k8s.description="Red Hat Quay Container Security Operator image"
 LABEL io.openshift.tags="quay,security"

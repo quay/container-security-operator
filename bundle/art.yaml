@@ -1,0 +1,8 @@
+---
+updates:
+  - file: "manifests/container-security-operator.clusterserviceversion.yaml"
+    update_list:
+      - search: "name: container-security-operator.v1.0.6"
+        replace: "name: container-security-operator.v3.18.2"
+      - search: "version: 1.0.6"
+        replace: "version: 3.18.2"

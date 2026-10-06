@@ -1,0 +1,9 @@
+---
+kind: ImageStream
+apiVersion: image.openshift.io/v1
+spec:
+  tags:
+  - name: quay-container-security-operator-rhel8
+    from:
+      kind: DockerImage
+      name: quay.io/projectquay/container-security-operator@sha256:f937d284761118fd0d4a5bb45f295266492c1fb156ae656c8f4f1501a913426a

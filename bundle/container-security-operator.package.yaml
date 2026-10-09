@@ -1,0 +1,6 @@
+---
+packageName: container-security-operator
+channels:
+- name: stable-3.15
+  currentCSV: container-security-operator.3.15.9
+defaultChannel: stable-3.15

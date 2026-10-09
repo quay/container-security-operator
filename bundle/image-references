@@ -7,3 +7,11 @@ spec:
     from:
       kind: DockerImage
       name: registry.redhat.io/quay/quay-container-security-rhel9-operator
+  - name: quay-container-security-rhel9-operator
+    from:
+      kind: DockerImage
+      name: quay.io/quay/container-security-operator
+  - name: quay-container-security-rhel9-operator
+    from:
+      kind: DockerImage
+      name: quay.io/projectquay/container-security-operator

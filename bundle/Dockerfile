@@ -1,4 +1,5 @@
 FROM scratch
+LABEL name="quay/quay-container-security-operator-bundle"
 LABEL operators.operatorframework.io.bundle.channel.default.v1: stable-3.6
 LABEL operators.operatorframework.io.bundle.channels.v1: stable-3.6
 LABEL operators.operatorframework.io.bundle.manifests.v1: manifests/

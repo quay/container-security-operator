@@ -25,4 +25,3 @@ LABEL maintainer="quay-devel@redhat.com"
 WORKDIR /
 COPY --from=builder /workspace/container-security-operator/bin/security-labeller /bin/security-labeller
 ENTRYPOINT ["/bin/security-labeller"]
-

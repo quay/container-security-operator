@@ -79,6 +79,14 @@ spec:
                             metadata:
                               type: string
                               minLength: 1
+                        basescores:
+                          type: array
+                          items:
+                            type: string
+                        cveids:
+                          type: array
+                          items:
+                            type: string
             status:
               type: object
               properties:

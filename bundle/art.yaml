@@ -3,8 +3,8 @@ updates:
   - file: "manifests/container-security-operator.clusterserviceversion.yaml"
     update_list:
       - search: "capabilities: Full Lifecycle"
-        replace: "capabilities: Full Lifecycle\n    olm.skipRange: \">=3.14.0 <3.17.6\""
+        replace: "capabilities: Full Lifecycle\n    olm.skipRange: \">=3.14.0 <3.17.7\""
       - search: "name: container-security-operator.v1.0.6"
-        replace: "name: container-security-operator.v3.17.6"
+        replace: "name: container-security-operator.v3.17.7"
       - search: "version: 1.0.6"
-        replace: "version: 3.17.6"
+        replace: "version: 3.17.7"

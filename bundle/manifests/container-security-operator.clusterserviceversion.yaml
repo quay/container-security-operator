@@ -7,7 +7,7 @@ metadata:
     containerImage: quay.io/quay/container-security-operator@sha256:6eefeaee910251ba26c825746d11ae166a9781aeace5455b2766d26298911f13
     createdAt: 2020-04-13 00:00:00
     description: Identify image vulnerabilities in Kubernetes pods
-    quay-version: v3.11.0
+    quay-version: v5.1.0
     repository: https://github.com/quay/container-security-operator
     tectonic-visibility: ocs
     features.operators.openshift.io/disconnected: "false"
@@ -164,4 +164,3 @@ spec:
       alm-owner-container-security-operator: container-security-operator
       operated-by: container-security-operator
   version: 1.0.6
-  replaces: container-security-operator.v1.0.5

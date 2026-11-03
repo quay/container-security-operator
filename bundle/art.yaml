@@ -2,7 +2,13 @@
 updates:
   - file: "manifests/container-security-operator.clusterserviceversion.yaml"
     update_list:
-      - search: "name: container-security-operator.v1.0.6"
-        replace: "name: container-security-operator.v3.18.1"
-      - search: "version: 1.0.6"
-        replace: "version: 3.18.1"
+      - search: "name: container-security-operator.v5.0.0"
+        replace: "name: container-security-operator.v{FULL_VER}"
+      - search: "  version: 5.0.0"
+        replace: "  version: {FULL_VER}"
+      - search: "olm.skipRange: \">=3.18.0 <5.0.0\""
+        replace: "olm.skipRange: \">=3.18.0 <{FULL_VER}\""
+  - file: "container-security-operator.package.yaml"
+    update_list:
+      - search: "currentCSV: container-security-operator.v5.0.0"
+        replace: "currentCSV: container-security-operator.v{FULL_VER}"

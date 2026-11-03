@@ -2,6 +2,7 @@ apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
   annotations:
+    olm.skipRange: ">=3.18.0 <5.0.0"
     capabilities: Full Lifecycle
     categories: Security
     containerImage: quay.io/quay/container-security-operator@sha256:6eefeaee910251ba26c825746d11ae166a9781aeace5455b2766d26298911f13
